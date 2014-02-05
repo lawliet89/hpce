@@ -1,0 +1,10 @@
+path('init',path);
+path('q1',path);
+path('q2',path);
+path('q3',path);
+path('q4',path);
+path('q5',path);
+path('q6',path);
+path('q7',path);
+path('q8',path);
+path('q9',path);
