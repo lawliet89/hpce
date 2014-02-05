@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#define M_PI 3.1415926535897932384626433832
 #define SAMPLE_SIZE 512
 #define DEFAULT_SINE_FREQ 50
 #define AMPLITUDE 30000
