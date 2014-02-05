@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 
 	while(1){
 		// Generate samples
-		for (i = 0; i < SAMPLE_SIZE; ++i) {
+		for (i = 0; i < SAMPLE_SIZE; i += 2) {
 			t += SAMPLE_INTERVAL;
 			phase += 2*M_PI*freq*SAMPLE_INTERVAL;
 
@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
 			}
 
 			samples[i] = (int16_t) (AMPLITUDE * sin(phase));
+			samples[i + 1] = samples[i];
 		}
 		// Copy samples to output
 		int done=write(STDOUT_FILENO, samples, cbBuffer);
