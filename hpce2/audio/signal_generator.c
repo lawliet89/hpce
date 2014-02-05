@@ -12,8 +12,6 @@
 #define SAMPLE_RATE 44100
 #define SAMPLE_INTERVAL 1.0/SAMPLE_RATE
 
-// 2 PI phase split over
-
 int main(int argc, char *argv[])
 {
 	int freq = DEFAULT_SINE_FREQ;

@@ -37,8 +37,6 @@ int main(int argc, char *argv[])
 		if(done<0){
 			fprintf(stderr, "%s : Write to stdout failed, error=%s.", argv[0], strerror(errno));
 			exit(1);
-		}else if(done!=cbBuffer){
-			fprintf(stderr, "%s : Could not read requested number of bytes from stream.\n", argv[0]);
 		}
 	}
 
