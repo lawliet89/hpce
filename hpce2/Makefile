@@ -7,9 +7,9 @@ SOX = sox-14.4.1
 tools: local/bin/sox local/bin/lame
 
 # Download Targets
-packages/$(SOX).tar.gz:
+packages/$(SOX).tar.gz: dir
 	curl $(SRC_URL)/$(SOX).tar.gz -o packages/$(SOX).tar.gz
-packages/$(LAME).tar.gz:
+packages/$(LAME).tar.gz: dir
 	curl $(SRC_URL)/$(LAME).tar.gz -o packages/$(LAME).tar.gz
 
 # Untar Targets
@@ -46,3 +46,12 @@ local/bin/lame: build/$(LAME)/src/lame
 # Housekeeping Targets
 clean:
 	rm -rf packages/* build/* local/*
+
+dir: packages build local
+packages:
+	mkdir -p packages
+build:
+	mkdir -p build
+local:
+	mkdir -p local
+
