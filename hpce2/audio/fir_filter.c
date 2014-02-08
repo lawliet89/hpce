@@ -62,10 +62,15 @@ int main(int argc, char *argv[])
 		for (int i = 0, end = got/sizeof(int16_t)/CHANNELS; i < end; ++i) {
 			int16_t *readPtr = samples + i*2;
 			double currentLeft = 0, currentRight = 0;
-			for (int j = 0; j < filterOrder; ++j) {
-				if (readPtr - samples < 0) {
-					readPtr = previous + bufferSize - 2;
-				}
+			for (int j = 0; j < i; ++j) {
+				currentLeft += *readPtr * coefficients[j];
+				currentRight += *(readPtr + 1) * coefficients[j];
+
+				readPtr -= 2;
+			}
+
+			readPtr = previous + bufferSize - 2;
+			for (int j = i; j < filterOrder; ++j) {
 				currentLeft += *readPtr * coefficients[j];
 				currentRight += *(readPtr + 1) * coefficients[j];
 
