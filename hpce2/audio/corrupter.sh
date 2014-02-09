@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-tempdir=$(mktemp -d "/tmp/corrupt.XXXXXXXXXX") ||\
+tempdir=$(mktemp -d "../tmp/corrupt.XXXXXXXXXX") ||\
 	{ echo "Failed to create temp directory"; exit 1; }
 trap "rm -rf $tempdir" EXIT
 

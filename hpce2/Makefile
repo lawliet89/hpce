@@ -47,11 +47,13 @@ local/bin/lame: build/$(LAME)/src/lame
 clean:
 	rm -rf packages/* build/* local/*
 
-dir: packages build local
+dir: packages build local tmp
 packages:
 	mkdir -p packages
 build:
 	mkdir -p build
 local:
 	mkdir -p local
+tmp:
+	mkdir -p tmp
 
