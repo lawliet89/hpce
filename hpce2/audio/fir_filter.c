@@ -24,26 +24,26 @@ int main(int argc, char *argv[])
 	}
 
 	// Determine frame size
-	unsigned filterOrder = 0;
+	unsigned noTaps = 0;
 	double temp;
 
 	while(!feof(coefficientFile)) {
 		fscanf(coefficientFile, "%lf", &temp);
-		filterOrder++;
+		noTaps++;
 	}
 
-	double *coefficients = malloc(sizeof(double) * filterOrder);
+	double *coefficients = malloc(sizeof(double) * noTaps);
 
 	rewind(coefficientFile);
 
 	// Read coefficients
-	for (int i = 0; i < filterOrder; ++i)
+	for (int i = 0; i < noTaps; ++i)
 		fscanf(coefficientFile, "%lf", coefficients + i);
 
 	fclose(coefficientFile);
 
 	// Buffer Samples
-	unsigned bufferSize = CHANNELS * filterOrder;
+	unsigned bufferSize = CHANNELS * noTaps;
 	int16_t *samples = calloc(bufferSize, sizeof(int16_t));
 	int16_t *previous = calloc(bufferSize, sizeof(int16_t));
 	int16_t *output = calloc(bufferSize, sizeof(int16_t));
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 			}
 
 			readPtr = previous + bufferSize - 2;
-			for (int j = i + 1; j < filterOrder; ++j) {
+			for (int j = i + 1; j < noTaps; ++j) {
 				currentLeft += *readPtr * coefficients[j];
 				currentRight += *(readPtr + 1) * coefficients[j];
 

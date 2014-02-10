@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 	int16_t samples[SAMPLE_SIZE];
 	unsigned cbBuffer = sizeof(int16_t) * SAMPLE_SIZE;
 	int i;
-	double phase = 0, t = 0;
+	double phase = 0;
 
 	if (argc > 1 ) {
 		freq = atoi(argv[1]);
@@ -29,12 +29,10 @@ int main(int argc, char *argv[])
 	while(1){
 		// Generate samples
 		for (i = 0; i < SAMPLE_SIZE; i += 2) {
-			t += SAMPLE_INTERVAL;
 			phase += 2*M_PI*freq*SAMPLE_INTERVAL;
 
 			if (phase > 2*M_PI) {
 				phase = fmod(phase, 2*M_PI);
-				t = fmod(t, 1.0/freq);
 			}
 
 			samples[i] = (int16_t) (AMPLITUDE * sin(phase));
