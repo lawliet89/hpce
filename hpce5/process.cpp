@@ -67,7 +67,7 @@ For example, to convert a 512x512 image input.png to 2-bit:
 and to convert output.raw back again:
 
 	convert -size 512x512 -depth 2 gray:output.raw output.png
-	
+
 They can also read/write on stdin/stdout for streaming. But, it is
 also easy to generate images programmatically, particularly when
 dealing with large images. You can even use /dev/zero and
@@ -209,20 +209,20 @@ void unpack_blob(unsigned w, unsigned h, unsigned bits, const uint64_t *pRaw, ui
 {
 	uint64_t buffer=0;
 	unsigned bufferedBits=0;
-	
+
 	const uint64_t MASK=0xFFFFFFFFFFFFFFFFULL>>(64-bits);
-	
+
 	for(unsigned i=0;i<w*h;i++){
 		if(bufferedBits==0){
 			buffer=shuffle64(bits, *pRaw++);
 			bufferedBits=64;
 		}
-		
+
 		pUnpacked[i]=buffer&MASK;
 		buffer=buffer>>bits;
 		bufferedBits-=bits;
 	}
-	
+
 	assert(bufferedBits==0);
 }
 
@@ -231,31 +231,31 @@ void pack_blob(unsigned w, unsigned h, unsigned bits, const uint32_t *pUnpacked,
 {
 	uint64_t buffer=0;
 	unsigned bufferedBits=0;
-	
+
 	const uint64_t MASK=0xFFFFFFFFFFFFFFFFULL>>(64-bits);
-	
+
 	for(unsigned i=0;i<w*h;i++){
 		buffer=buffer | (uint64_t(pUnpacked[i]&MASK)<< bufferedBits);
 		bufferedBits+=bits;
-		
+
 		if(bufferedBits==64){
 			*pRaw++ = shuffle64(bits, buffer);
 			buffer=0;
 			bufferedBits=0;
 		}
 	}
-	
+
 	assert(bufferedBits==0);
 }
 
 bool read_blob(int fd, uint64_t cbBlob, void *pBlob)
 {
 	uint8_t *pBytes=(uint8_t*)pBlob;
-	
+
 	uint64_t done=0;
 	while(done<cbBlob){
-		int todo=(int)std::min(uint64_t(1)<<30, cbBlob-done);		
-		
+		int todo=(int)std::min(uint64_t(1)<<30, cbBlob-done);
+
 		int got=read(fd, pBytes+done, todo);
 		if(got==0 && done==0)
 			return false;	// end of file
@@ -263,18 +263,18 @@ bool read_blob(int fd, uint64_t cbBlob, void *pBlob)
 			throw std::invalid_argument("Read failure.");
 		done+=got;
 	}
-	
+
 	return true;
 }
 
 void write_blob(int fd, uint64_t cbBlob, const void *pBlob)
 {
 	const uint8_t *pBytes=(const uint8_t*)pBlob;
-	
+
 	uint64_t done=0;
 	while(done<cbBlob){
 		int todo=(int)std::min(uint64_t(1)<<30, cbBlob-done);
-		
+
 		int got=write(fd, pBytes+done, todo);
 		if(got<=0)
 			throw std::invalid_argument("Write failure.");
@@ -302,7 +302,7 @@ void erode(unsigned w, unsigned h, const std::vector<uint32_t> &input, std::vect
 {
 	auto in=[&](int x, int y) -> uint32_t { return input[y*w+x]; };
 	auto out=[&](int x, int y) -> uint32_t & {return output[y*w+x]; };
-	
+
 	for(unsigned x=0;x<w;x++){
 		if(x==0){
 			out(0,0)=vmin(in(0,0), in(0,1), in(1,0));
@@ -342,7 +342,7 @@ void dilate(unsigned w, unsigned h, const std::vector<uint32_t> &input, std::vec
 {
 	auto in=[&](int x, int y) -> uint32_t { return input[y*w+x]; };
 	auto out=[&](int x, int y) -> uint32_t & {return output[y*w+x]; };
-	
+
 	for(unsigned x=0;x<w;x++){
 		if(x==0){
 			out(0,0)=vmax(in(0,0), in(0,1), in(1,0));
@@ -372,12 +372,12 @@ void dilate(unsigned w, unsigned h, const std::vector<uint32_t> &input, std::vec
 void process(int levels, unsigned w, unsigned h, unsigned /*bits*/, std::vector<uint32_t> &pixels)
 {
 	std::vector<uint32_t> buffer(w*h);
-	
+
 	// Depending on whether levels is positive or negative,
 	// we flip the order round.
 	auto fwd=levels < 0 ? erode : dilate;
 	auto rev=levels < 0 ? dilate : erode;
-	
+
 	for(int i=0;i<std::abs(levels);i++){
 		fwd(w, h, pixels, buffer);
 		std::swap(pixels, buffer);
@@ -392,7 +392,7 @@ void process(int levels, unsigned w, unsigned h, unsigned /*bits*/, std::vector<
 void invert(int levels, unsigned w, unsigned h, unsigned bits, std::vector<uint32_t> &pixels)
 {
 	uint32_t mask=0xFFFFFFFFul>>bits;
-	
+
 	for(unsigned i=0;i<w*h;i++){
 		pixels[i]=mask-pixels[i];
 	}
@@ -407,53 +407,53 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "   levels=1 by default\n");
 			exit(1);
 		}
-		
+
 		unsigned w=atoi(argv[1]);
 		unsigned h=atoi(argv[2]);
-		
+
 		unsigned bits=8;
 		if(argc>3){
 			bits=atoi(argv[3]);
 		}
-		
+
 		if(bits>32)
 			throw std::invalid_argument("Bits must be <= 32.");
-		
+
 		unsigned tmp=bits;
 		while(tmp!=1){
 			tmp>>=1;
 			if(tmp==0)
 				throw std::invalid_argument("Bits must be a binary power.");
 		}
-		
+
 		if( ((w*bits)%64) != 0){
 			throw std::invalid_argument(" width*bits must be divisible by 64.");
 		}
-		
+
 		int levels=1;
 		if(argc>4){
 			levels=atoi(argv[4]);
 		}
-		
+
 		fprintf(stderr, "Processing %d x %d image with %d bits per pixel.\n", w, h, bits);
-		
+
 		uint64_t cbRaw=uint64_t(w)*h*bits/8;
 		std::vector<uint64_t> raw(cbRaw/8);
-		
+
 		std::vector<uint32_t> pixels(w*h);
-		
+
 		while(1){
 			if(!read_blob(STDIN_FILENO, cbRaw, &raw[0]))
 				break;	// No more images
-			unpack_blob(w, h, bits, &raw[0], &pixels[0]);		
-			
+			unpack_blob(w, h, bits, &raw[0], &pixels[0]);
+
 			process(levels, w, h, bits, pixels);
 			//invert(levels, w, h, bits, pixels);
-			
+
 			pack_blob(w, h, bits, &pixels[0], &raw[0]);
 			write_blob(STDOUT_FILENO, cbRaw, &raw[0]);
 		}
-		
+
 		return 0;
 	}catch(std::exception &e){
 		std::cerr<<"Caught exception : "<<e.what()<<"\n";
