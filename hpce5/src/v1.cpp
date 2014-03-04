@@ -12,8 +12,8 @@ uint64_t bufferSize, chunkSize, imageSize;
 */
 uint8_t *bufferPass1 = nullptr;
 
-bool readInput(uint8_t *buffer, uint64_t chunkSize, uint64_t bufferSize,
-               uint64_t imageSize);
+uint64_t readInput(uint8_t *buffer, uint64_t chunkSize, uint64_t bufferSize,
+                   uint64_t imageSize);
 
 int main(int argc, char *argv[]) {
   try {
@@ -26,7 +26,10 @@ int main(int argc, char *argv[]) {
     std::cerr << "Pass Buffer Size: " << bufferSize << std::endl;
     std::cerr << "Chunk Size: " << chunkSize << std::endl;
 
-    while (readInput(bufferPass1, chunkSize, bufferSize, imageSize)) {
+    uint64_t chunkRead;
+    while ((chunkRead =
+                readInput(bufferPass1, chunkSize, bufferSize, imageSize))) {
+      // call min/max
     }
 
     deallocateBuffer(bufferPass1);
@@ -37,23 +40,26 @@ int main(int argc, char *argv[]) {
   }
 }
 
-bool readInput(uint8_t *buffer, uint64_t chunkSize, uint64_t bufferSize,
-               uint64_t imageSize) {
+uint64_t readInput(uint8_t *buffer, uint64_t chunkSize, uint64_t bufferSize,
+                   uint64_t imageSize) {
   static uint8_t *readBuffer = nullptr;
   static uint64_t bytesReadSoFar = 0;
 
   if (readBuffer == nullptr)
     readBuffer = buffer;
 
+  uint8_t *outputStart = readBuffer;
+
   uint64_t bytesToRead = std::min(chunkSize, imageSize - bytesReadSoFar);
   uint64_t bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
 
+  uint64_t finalBytesRead = bytesRead;
   bytesReadSoFar += bytesRead;
   readBuffer += bytesRead;
 
   // End of all images
   if (!bytesRead && readBuffer == buffer)
-    return false;
+    return 0u;
 
   while (bytesRead != bytesToRead) {
     std::cerr << "Warning: Chunk was not read in its entirety " << bytesRead
@@ -63,6 +69,7 @@ bool readInput(uint8_t *buffer, uint64_t chunkSize, uint64_t bufferSize,
 
     bytesReadSoFar += bytesRead;
     readBuffer += bytesRead;
+    finalBytesRead += bytesRead;
   }
 
   if (bytesReadSoFar >= imageSize)
@@ -70,5 +77,11 @@ bool readInput(uint8_t *buffer, uint64_t chunkSize, uint64_t bufferSize,
   if (readBuffer >= buffer + bufferSize)
     readBuffer = buffer;
 
-  return true;
+  // Test write to stdout
+  uint64_t written = 0;
+  while (written < finalBytesRead) {
+    written += write(STDOUT_FILENO, outputStart, finalBytesRead - written);
+  }
+
+  return finalBytesRead;
 }

@@ -57,6 +57,8 @@ uint64_t calculateBufferSize(uint32_t w, uint32_t h, uint32_t bits,
       uint64_t(1u) << uint32_t(floor(log2(minBufferSize) + 1));
 
   assert(bufferSize >= minBufferSize);
+  assert(bufferSize % 2 == 0);
+
   return bufferSize;
 }
 
@@ -73,6 +75,9 @@ uint64_t calculateChunkSize(uint32_t w, uint32_t h, uint32_t bits,
 
   // but must be smaller than bufferSize
   chunkSize = std::min(chunkSize, bufferSize);
+
+  assert(bufferSize % chunkSize == 0);
+  assert(chunkSize % 2 == 0);
 
   return chunkSize;
 }
