@@ -1,57 +1,74 @@
+#include "include/housekeeping.hpp"
 #include <unistd.h>
-#include <cassert>
-#include <stdexcept>
-#include <algorithm>
-#include <iostream>
-#include <cstdio>
-#include <cmath>
+
+/*
+  Global Parameters
+*/
+uint32_t w, h, bits = 8, levels = 1;
+uint64_t bufferSize, chunkSize, imageSize;
+
+/*
+  Global Buffers
+*/
+uint8_t *bufferPass1 = nullptr;
+
+bool readInput(uint8_t *buffer, uint64_t chunkSize, uint64_t bufferSize,
+               uint64_t imageSize);
 
 int main(int argc, char *argv[]) {
   try {
-    if (argc < 3) {
-      fprintf(stderr, "Usage: process width height [bits] [levels]\n");
-      fprintf(stderr, "   bits=8 by default\n");
-      fprintf(stderr, "   levels=1 by default\n");
-      exit(1);
+    processArgs(argc, argv, w, h, bits, levels);
+    bufferSize = calculateBufferSize(w, h, bits, levels);
+    chunkSize = calculateChunkSize(w, h, bits, levels, bufferSize);
+    imageSize = calculateImageSize(w, h, bits);
+    bufferPass1 = allocateBuffer(bufferSize);
+
+    std::cerr << "Pass Buffer Size: " << bufferSize << std::endl;
+    std::cerr << "Chunk Size: " << chunkSize << std::endl;
+
+    while (readInput(bufferPass1, chunkSize, bufferSize, imageSize)) {
     }
 
-    unsigned w = atoi(argv[1]);
-    unsigned h = atoi(argv[2]);
-
-    unsigned bits = 8;
-    if (argc > 3) {
-      bits = atoi(argv[3]);
-    }
-
-    if (bits > 32)
-      throw std::invalid_argument("Bits must be <= 32.");
-
-    unsigned tmp = bits;
-    while (tmp != 1) {
-      tmp >>= 1;
-      if (tmp == 0)
-        throw std::invalid_argument("Bits must be a binary power.");
-    }
-
-    if (((w * bits) % 64) != 0) {
-      throw std::invalid_argument(" width*bits must be divisible by 64.");
-    }
-
-    int levels = 1;
-    if (argc > 4) {
-      levels = atoi(argv[4]);
-    }
-
-    if (abs(levels) > std::min(std::min(w / 4u, h / 4u), 64u)) {
-      throw std::invalid_argument(
-          "0 <= abs(levels) <= min(width/4, height/4, 64)");
-    }
-
-    fprintf(stderr, "Processing %d x %d image with %d bits per pixel.\n", w, h,
-            bits);
+    deallocateBuffer(bufferPass1);
   }
   catch (std::exception &e) {
     std::cerr << "Caught exception : " << e.what() << "\n";
     return 1;
   }
+}
+
+bool readInput(uint8_t *buffer, uint64_t chunkSize, uint64_t bufferSize,
+               uint64_t imageSize) {
+  static uint8_t *readBuffer = nullptr;
+  static uint64_t bytesReadSoFar = 0;
+
+  if (readBuffer == nullptr)
+    readBuffer = buffer;
+
+  uint64_t bytesToRead = std::min(chunkSize, imageSize - bytesReadSoFar);
+  uint64_t bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
+
+  bytesReadSoFar += bytesRead;
+  readBuffer += bytesRead;
+
+  // End of all images
+  if (!bytesRead && readBuffer == buffer)
+    return false;
+
+  while (bytesRead != bytesToRead) {
+    std::cerr << "Warning: Chunk was not read in its entirety " << bytesRead
+              << "/" << bytesToRead << "-- retrying" << std::endl;
+    bytesToRead = bytesToRead - bytesRead;
+    bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
+
+    bytesReadSoFar += bytesRead;
+    readBuffer += bytesRead;
+  }
+
+  if (bytesReadSoFar >= imageSize)
+    bytesReadSoFar = 0;
+  if (readBuffer >= buffer + bufferSize)
+    readBuffer = buffer;
+
+  return true;
 }
