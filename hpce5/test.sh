@@ -5,6 +5,7 @@ width=$((2<<12))
 height=$((2<<12))
 bits=8
 levels=1
+copies=1
 
 bytes=$(($width*$height*$bits/8))
 
@@ -20,8 +21,7 @@ actual="$tempdir/actual"
 mkfifo "$expected"
 mkfifo "$actual"
 
-echo "Producing $bytes bytes"
-(head --bytes="$bytes" /dev/urandom |\
+(./produce.sh $width $height $bits $copies |\
 	tee  >(./process $width $height $bits $levels > "$actual") |\
  	"$@" $width $height $bits $levels > "$expected") &
 
