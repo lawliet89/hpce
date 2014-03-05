@@ -1,4 +1,4 @@
-CPPFLAGS=-I -Wall -std=c++11 -O3
+CPPFLAGS=-I -Wall -std=c++11 -O3 -pthread
 CXX=clang++
 SHELL=/bin/bash
 
