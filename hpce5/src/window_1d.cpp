@@ -25,11 +25,8 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
       return;
     }
 
-    // A lock here is necessary because the following could happen:
-    // - reader has lock, and is checking condition.
-    // - As it has read the value and/or checked the value, we modify
-    // - Before it goes back to sleep, we notify later on
-    // - And therefore reader never gets woken up again
+    // A lock here is necessary to ensure that the reader thread is not awake
+    // and checking on condition
     readConditional.lockAndUpdate([=] { readSemaphore -= n_levels; });
 
     std::cerr << "[Window] Artificial Spinning..." << std::endl;

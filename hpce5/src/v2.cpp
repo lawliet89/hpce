@@ -35,6 +35,11 @@ int main(int argc, char *argv[]) {
 
     bufferSize = calculateBufferSize(w, h, bits, levels);
     chunkSize = calculateChunkSize(w, h, bits, levels, bufferSize);
+
+    // The bufferSize is "ideal". To allow us to read-ahead by one chunk, we
+    // shall extend its size by one chunk
+    bufferSize += chunkSize;
+
     imageSize = calculateImageSize(w, h, bits);
     bufferPass1 = allocateBuffer(bufferSize);
 
@@ -87,7 +92,7 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
   readBuffer += bytesRead;
 
   // End of all images
-  if (!bytesRead && readBuffer == buffer)
+  if (!bytesRead && bytesReadSoFar == 0)
     return 0u;
 
   while (bytesRead != bytesToRead) {
