@@ -1,5 +1,5 @@
 #include "include/housekeeping.hpp"
-// #include "include/window_1d.hpp"
+#include "include/window_1d.hpp"
 #include <unistd.h>
 
 /*
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     uint64_t chunkRead;
     while ((chunkRead =
                 readInput(bufferPass1, chunkSize, bufferSize, imageSize))) {
-      // call min/max
+      window_1d(bufferPass1, nullptr, bufferSize, chunkSize, w, levels, bits);
     }
 
     deallocateBuffer(bufferPass1);
@@ -50,7 +50,7 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
   if (readBuffer == nullptr)
     readBuffer = buffer;
 
-  uint8_t *outputStart = readBuffer;
+  // uint8_t *outputStart = readBuffer;
 
   uint64_t bytesToRead = std::min(uint64_t(chunkSize), imageSize - bytesReadSoFar);
   uint64_t bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
@@ -80,11 +80,11 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
     readBuffer = buffer;
 
   // Test write to stdout
-  uint64_t written = 0;
-  while (written < finalBytesRead) {
-    written += write(STDOUT_FILENO, outputStart + written,
-      finalBytesRead - written);
-  }
+  // uint64_t written = 0;
+  // while (written < finalBytesRead) {
+  //   written += write(STDOUT_FILENO, outputStart + written,
+  //     finalBytesRead - written);
+  // }
 
   return finalBytesRead;
 }
