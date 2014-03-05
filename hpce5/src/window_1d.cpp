@@ -25,6 +25,7 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
 
     // A lock here is necessary to ensure that the reader thread is not awake
     // and checking on condition
+    // would be -1 if n-threaded
     readConditional.lockAndUpdate([&] { readSemaphore -= n_levels; });
 
     // std::cerr << "[Window] Artificial Spinning..." << std::endl;
@@ -48,6 +49,6 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
     if (current >= (in_buf + buf_size)) {
       current = in_buf;
     }
-    std::cerr << "[Window] Chunk done " << acc << "\n";
+    //std::cerr << "[Window] Chunk done " << acc << "\n";
   }
 }
