@@ -11,6 +11,13 @@ struct ConditionalMutex {
 	  cv.wait(lk, callable);
 	  return lk;
 	}
+
+	template <typename Callable> void lockAndUpdate(Callable callable) {
+	   std::unique_lock<std::mutex> lk(m);
+	   callable();
+	   lk.unlock();
+	}
+
 	template <typename Callable> void lockUpdateAndNotify(Callable callable) {
 	   std::unique_lock<std::mutex> lk(m);
 	   callable();

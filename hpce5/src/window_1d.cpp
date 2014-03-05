@@ -25,19 +25,27 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
       return;
     }
 
+    // A lock here is necessary because the following could happen:
+    // - reader has lock, and is checking condition.
+    // - As it has read the value and/or checked the value, we modify
+    // - Before it goes back to sleep, we notify later on
+    // - And therefore reader never gets woken up again
+    readConditional.lockAndUpdate([=] { readSemaphore -= n_levels; });
+
     std::cerr << "[Window] Artificial Spinning..." << std::endl;
     // artificial spinning to take up time
     uint64_t acc = 0;
     for (uint32_t i = 0; i < chunk_size; ++i) {
       acc += *(in_buf);
+
+      if (i == chunk_size/2) {
+        // try to signal reading thread
+        readConditional.notify_all();
+        std::cerr << "[Window] Hinting read... " << std::endl;
+
+      }
     }
 
-    // A lock here is necessary because the following could happen:
-    // - reader has lock, and is checking condition.
-    // - As it has read the value and/or checked the value, we modify
-    // - Before it goes back to sleep, we notify
-    // - And therefore reader never gets woken up again
-    readConditional.lockUpdateAndNotify([=] { readSemaphore -= n_levels; });
     std::cerr << "[Window] Chunk done" << std::endl;
   }
 }
