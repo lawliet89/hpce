@@ -6,30 +6,32 @@
 #include <thread>
 #include <atomic>
 
-/*
-  Global Parameters
-*/
-uint32_t w, h, bits = 8, levels = 1;
-uint64_t bufferSize, imageSize;
-uint32_t chunkSize;
-
-/*
-  Global Buffers
-*/
-uint8_t *bufferPass1 = nullptr;
-
-/*
-  Global Synchronisation Primitives
-*/
-ConditionalMutex readConditional;
-std::atomic<int> readSemaphore;
-bool stop = false;
-
 uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
-                   uint64_t imageSize);
+                   uint64_t imageSize, uint32_t levels,
+                   ConditionalMutex &readConditional,
+                   std::atomic<int> &readSemaphore);
 
 int main(int argc, char *argv[]) {
   try {
+    /*
+      Global Parameters
+    */
+    uint32_t w, h, bits = 8, levels = 1;
+    uint64_t bufferSize, imageSize;
+    uint32_t chunkSize;
+
+    /*
+      Global Buffers
+    */
+    uint8_t *bufferPass1 = nullptr;
+
+    /*
+      Global Synchronisation Primitives
+    */
+    ConditionalMutex readConditional;
+    std::atomic<int> readSemaphore;
+    bool stop = false;
+
     processArgs(argc, argv, w, h, bits, levels);
 
     bufferSize = calculateBufferSize(w, h, bits, levels);
@@ -54,7 +56,8 @@ int main(int argc, char *argv[]) {
 
     uint64_t chunkRead;
     while ((chunkRead =
-                readInput(bufferPass1, chunkSize, bufferSize, imageSize))) {
+                readInput(bufferPass1, chunkSize, bufferSize, imageSize,
+                  levels, readConditional, readSemaphore))) {
     }
     // std::cerr << "[Read] Finished." << std::endl;
     stop = true;
@@ -69,12 +72,14 @@ int main(int argc, char *argv[]) {
 }
 
 uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
-                   uint64_t imageSize) {
+                   uint64_t imageSize, uint32_t levels,
+                   ConditionalMutex &readConditional,
+                   std::atomic<int> &readSemaphore) {
   static uint8_t *readBuffer = nullptr;
   static uint64_t bytesReadSoFar = 0;
 
   // std::cerr << "[Read] Waiting to start read" << std::endl;
-  std::unique_lock<std::mutex> lock = readConditional.waitFor([]{
+  std::unique_lock<std::mutex> lock = readConditional.waitFor([&]{
     // std::cerr << "[Read] Woken. Checking semaphore = "
     //   << readSemaphore << std::endl;
     return (readSemaphore < 0);

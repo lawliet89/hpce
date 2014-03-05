@@ -1,5 +1,4 @@
 #include "include/window_1d.hpp"
-#include "include/extern.hpp"
 #include <unistd.h>
 #include <iostream>
 #include <cassert>
