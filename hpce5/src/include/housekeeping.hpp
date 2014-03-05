@@ -21,4 +21,8 @@ uint32_t calculateChunkSize(uint32_t w, uint32_t h, uint32_t bits,
 uint8_t *allocateBuffer(uint64_t size, bool maximise = false);
 void deallocateBuffer(uint8_t *buffer);
 
+void zeroiseBuffer(uint8_t *buffer, uint64_t size);
+void oneiseBuffer(uint8_t *buffer, uint64_t size);
+
+
 #endif // HOUSEKEEPING_H_

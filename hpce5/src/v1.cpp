@@ -31,7 +31,8 @@ int main(int argc, char *argv[]) {
     uint64_t chunkRead;
     while ((chunkRead =
                 readInput(bufferPass1, chunkSize, bufferSize, imageSize))) {
-      window_1d(bufferPass1, nullptr, bufferSize, chunkSize, w, levels, bits);
+      window_1d(bufferPass1, nullptr, bufferSize, chunkSize, w, h,
+                levels, bits);
     }
 
     deallocateBuffer(bufferPass1);

@@ -83,10 +83,17 @@ uint32_t calculateChunkSize(uint32_t w, uint32_t h, uint32_t bits,
 }
 
 uint8_t *allocateBuffer(uint64_t size, bool maximise) {
-  uint8_t *ptr = new uint8_t[size]();
+  uint8_t *buffer = new uint8_t[size]();
   if (maximise)
-    memset(ptr, 0xff, size);
-  return ptr;
+    oneiseBuffer(buffer, size);
+  return buffer;
+}
+
+void zeroiseBuffer(uint8_t *buffer, uint64_t size) {
+  memset(buffer, 0x00, size);
+}
+void oneiseBuffer(uint8_t *buffer, uint64_t size) {
+  memset(buffer, 0xff, size);
 }
 
 void deallocateBuffer(uint8_t *buffer) { delete[] buffer; }
