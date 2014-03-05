@@ -1,4 +1,14 @@
 #include "include/window_1d.hpp"
+#include "include/extern.hpp"
+#include "include/conditional_mutex.hpp"
+#include <atomic>
+#include <iostream>
+
+extern bool stop;
+extern bool startReading;
+extern ConditionalMutex readConditional;
+extern std::atomic<int> readSemaphore;
+
 // does 1d rolling window min/max over the given chunks of rows and accumulates
 // results vertically
 void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
@@ -6,7 +16,31 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
                const uint32_t img_height_pix, const uint32_t n_levels,
                const uint8_t bit_width)
 {
-  // fix up img width and chunk size and whatnot
+  while(1) {
+    std::cerr << "[Window] Waiting for read to be done..." << std::endl;
+    // Synchronise all "threads"
+    while (readSemaphore != 0); // spin
+    readSemaphore -= n_levels;
 
-  return;
+    std::cerr << "[Window] Artificial Spinning..." << std::endl;
+    // artificial spinning to take up time
+    uint64_t acc = 0;
+    for (uint32_t i = 0; i < chunk_size; ++i) {
+      acc += *(in_buf);
+
+      if (i == chunk_size/2) {
+        // try to signal reading thread
+        bool hint =
+          readConditional.tryLockUpdateAndNotify([] { startReading = true; });
+                std::cerr << "[Window] Hinting read... " << hint << std::endl;
+
+      }
+    }
+
+    std::cerr << "[Window] Chunk done" << std::endl;
+    if (stop) {
+      std::cerr << "[Window] Exiting" << std::endl;
+      return;
+    }
+  }
 }
