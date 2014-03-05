@@ -9,7 +9,7 @@
 void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
                    uint64_t imageSize, uint32_t levels,
                    ConditionalMutex &readConditional,
-                   std::atomic<int> &readSemaphore);
+                   std::atomic<int> &readSemaphore, bool &consumerStop);
 
 int main(int argc, char *argv[]) {
   try {
@@ -28,9 +28,11 @@ int main(int argc, char *argv[]) {
     /*
       Global Synchronisation Primitives
     */
+
+    // stdin read -> first pass
     ConditionalMutex readConditional;
     std::atomic<int> readSemaphore;
-    bool stop = false;
+    bool readStop = false;
 
     processArgs(argc, argv, w, h, bits, levels);
 
@@ -51,13 +53,11 @@ int main(int argc, char *argv[]) {
     readSemaphore = levels * -1;
     std::thread pass1Thread(window_1d, bufferPass1, nullptr, bufferSize,
                             chunkSize, w, h, levels, bits,
-                            std::ref(stop), std::ref(readConditional),
+                            std::ref(readStop), std::ref(readConditional),
                             std::ref(readSemaphore));
 
     readInput(bufferPass1, chunkSize, bufferSize, imageSize,
-      levels, readConditional, readSemaphore);
-    // std::cerr << "[Read] Finished." << std::endl;
-    stop = true;
+      levels, readConditional, readSemaphore, readStop);
     pass1Thread.join();
 
     deallocateBuffer(bufferPass1);
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
                    uint64_t imageSize, uint32_t levels,
                    ConditionalMutex &readConditional,
-                   std::atomic<int> &readSemaphore) {
+                   std::atomic<int> &readSemaphore, bool &consumerStop) {
 
   uint8_t *readBuffer = nullptr;
   uint64_t bytesReadSoFar = 0;
@@ -96,8 +96,10 @@ void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
     readBuffer += bytesRead;
 
     // End of all images
-    if (!bytesRead && bytesReadSoFar == 0)
+    if (!bytesRead && bytesReadSoFar == 0) {
+      consumerStop = true;
       return;
+    }
 
     while (bytesRead != bytesToRead) {
       std::cerr << "Warning: Chunk was not read in its entirety " << bytesRead
