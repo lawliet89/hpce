@@ -21,7 +21,6 @@ uint8_t *bufferPass1 = nullptr;
 /*
   Global Synchronisation Primitives
 */
-bool startReading = true;
 ConditionalMutex readConditional;
 std::atomic<int> readSemaphore;
 
@@ -71,7 +70,11 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
 
   std::cerr << "[Read] Waiting to start read" << std::endl;
   std::unique_lock<std::mutex> lock =
-    readConditional.waitFor([]{ return startReading; });
+    readConditional.waitFor([]{
+      std::cerr << "[Read] Woken. Checking semaphore = "
+        << readSemaphore << std::endl;
+      return readSemaphore < 0;
+    });
 
   if (readBuffer == nullptr)
     readBuffer = buffer;
@@ -113,7 +116,8 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
   }
 
   std::cerr << "[Read] Read. Notifying" << std::endl;
-  readConditional.updateAndNotify( [] { startReading = false; });
+
+  lock.unlock();
   readSemaphore += levelsAbs;
 
   return finalBytesRead;

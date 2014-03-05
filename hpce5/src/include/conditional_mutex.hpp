@@ -29,4 +29,8 @@ struct ConditionalMutex {
 	   cv.notify_all();
 	   return true;
 	}
+
+	void notify_all() {
+		cv.notify_all();
+	}
 };

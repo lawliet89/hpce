@@ -5,7 +5,6 @@
 #include <iostream>
 
 extern bool stop;
-extern bool startReading;
 extern ConditionalMutex readConditional;
 extern std::atomic<int> readSemaphore;
 
@@ -20,6 +19,7 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
     std::cerr << "[Window] Waiting for read to be done..." << std::endl;
     // Synchronise all "threads"
     while (readSemaphore != 0); // spin
+    std::cerr << "[Window] Semaphore = 0" << std::endl;
     readSemaphore -= n_levels;
 
     std::cerr << "[Window] Artificial Spinning..." << std::endl;
@@ -30,9 +30,8 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
 
       if (i == chunk_size/2) {
         // try to signal reading thread
-        bool hint =
-          readConditional.tryLockUpdateAndNotify([] { startReading = true; });
-                std::cerr << "[Window] Hinting read... " << hint << std::endl;
+        readConditional.notify_all();
+        std::cerr << "[Window] Hinting read... " << std::endl;
 
       }
     }
