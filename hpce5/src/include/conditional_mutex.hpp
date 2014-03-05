@@ -1,3 +1,5 @@
+#ifndef CONDITIONAL_MUTEX_H_
+#define CONDITIONAL_MUTEX_H_
 #include <mutex>
 #include <condition_variable>
 
@@ -46,3 +48,4 @@ struct ConditionalMutex {
 		cv.notify_all();
 	}
 };
+#endif

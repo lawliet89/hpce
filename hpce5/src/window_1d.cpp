@@ -1,21 +1,17 @@
 #include "include/window_1d.hpp"
 #include "include/extern.hpp"
-#include "include/conditional_mutex.hpp"
-#include <atomic>
 #include <unistd.h>
 #include <iostream>
 #include <cassert>
-
-extern bool stop;
-extern ConditionalMutex readConditional;
-extern std::atomic<int> readSemaphore;
 
 // does 1d rolling window min/max over the given chunks of rows and accumulates
 // results vertically
 void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
                const uint32_t chunk_size, const uint32_t img_width_pix,
                const uint32_t img_height_pix, const uint32_t n_levels,
-               const uint8_t bit_width)
+               const uint8_t bit_width,
+               bool &stop, ConditionalMutex &readConditional,
+               std::atomic<int> &readSemaphore)
 {
   uint8_t *current = in_buf;
 
@@ -30,7 +26,7 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
 
     // A lock here is necessary to ensure that the reader thread is not awake
     // and checking on condition
-    readConditional.lockAndUpdate([=] { readSemaphore -= n_levels; });
+    readConditional.lockAndUpdate([&] { readSemaphore -= n_levels; });
 
     // std::cerr << "[Window] Artificial Spinning..." << std::endl;
     // artificial spinning to take up time

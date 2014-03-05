@@ -23,7 +23,6 @@ uint8_t *bufferPass1 = nullptr;
 */
 ConditionalMutex readConditional;
 std::atomic<int> readSemaphore;
-
 bool stop = false;
 
 uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
@@ -49,7 +48,9 @@ int main(int argc, char *argv[]) {
     // Set up concurrency
     readSemaphore = levels * -1;
     std::thread pass1Thread(window_1d, bufferPass1, nullptr, bufferSize,
-                            chunkSize, w, h, levels, bits);
+                            chunkSize, w, h, levels, bits,
+                            std::ref(stop), std::ref(readConditional),
+                            std::ref(readSemaphore));
 
     uint64_t chunkRead;
     while ((chunkRead =
