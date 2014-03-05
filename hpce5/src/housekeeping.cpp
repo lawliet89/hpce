@@ -63,7 +63,7 @@ uint64_t calculateBufferSize(uint32_t w, uint32_t h, uint32_t bits,
 }
 
 // TODO: Optimise this
-uint64_t calculateChunkSize(uint32_t w, uint32_t h, uint32_t bits,
+uint32_t calculateChunkSize(uint32_t w, uint32_t h, uint32_t bits,
                             uint32_t levels, uint64_t bufferSize) {
   uint32_t widthExponent = log2(w * bits) - 3;
   // range 512 - 4k
@@ -79,7 +79,7 @@ uint64_t calculateChunkSize(uint32_t w, uint32_t h, uint32_t bits,
   assert(bufferSize % chunkSize == 0);
   assert(chunkSize % 2 == 0);
 
-  return chunkSize;
+  return uint32_t(chunkSize);
 }
 
 uint8_t *allocateBuffer(uint64_t size, bool maximise) {

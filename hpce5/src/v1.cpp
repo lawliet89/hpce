@@ -1,18 +1,20 @@
 #include "include/housekeeping.hpp"
+// #include "include/window_1d.hpp"
 #include <unistd.h>
 
 /*
   Global Parameters
 */
 uint32_t w, h, bits = 8, levels = 1;
-uint64_t bufferSize, chunkSize, imageSize;
+uint64_t bufferSize, imageSize;
+uint32_t chunkSize;
 
 /*
   Global Buffers
 */
 uint8_t *bufferPass1 = nullptr;
 
-uint64_t readInput(uint8_t *buffer, uint64_t chunkSize, uint64_t bufferSize,
+uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
                    uint64_t imageSize);
 
 int main(int argc, char *argv[]) {
@@ -40,7 +42,7 @@ int main(int argc, char *argv[]) {
   }
 }
 
-uint64_t readInput(uint8_t *buffer, uint64_t chunkSize, uint64_t bufferSize,
+uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
                    uint64_t imageSize) {
   static uint8_t *readBuffer = nullptr;
   static uint64_t bytesReadSoFar = 0;
@@ -50,7 +52,7 @@ uint64_t readInput(uint8_t *buffer, uint64_t chunkSize, uint64_t bufferSize,
 
   uint8_t *outputStart = readBuffer;
 
-  uint64_t bytesToRead = std::min(chunkSize, imageSize - bytesReadSoFar);
+  uint64_t bytesToRead = std::min(uint64_t(chunkSize), imageSize - bytesReadSoFar);
   uint64_t bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
 
   uint64_t finalBytesRead = bytesRead;
