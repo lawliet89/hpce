@@ -68,12 +68,12 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
   static uint64_t bytesReadSoFar = 0;
 
   std::cerr << "[Read] Waiting to start read" << std::endl;
-  std::unique_lock<std::mutex> lock =
-    readConditional.waitFor([]{
-      std::cerr << "[Read] Woken. Checking semaphore = "
-        << readSemaphore << std::endl;
-      return readSemaphore < 0;
-    });
+  // readConditional.waitFor([]{
+  //   std::cerr << "[Read] Woken. Checking semaphore = "
+  //     << readSemaphore << std::endl;
+  //   return (readSemaphore < 0);
+  // });
+  while(readSemaphore >= 0); //spin
 
   if (readBuffer == nullptr)
     readBuffer = buffer;
@@ -114,10 +114,8 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
       finalBytesRead - written);
   }
 
-  std::cerr << "[Read] Read. Notifying" << std::endl;
-  readConditional.updateUnlockAndNotify(std::move(lock), [] {
-    readSemaphore += levels;
-  });
+  std::cerr << "[Read] Read. Updating semaphore." << std::endl;
+  readSemaphore += levels;
 
   return finalBytesRead;
 }

@@ -3,6 +3,7 @@
 #include "include/conditional_mutex.hpp"
 #include <atomic>
 #include <iostream>
+#include <cassert>
 
 extern bool stop;
 extern ConditionalMutex readConditional;
@@ -16,16 +17,13 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
                const uint8_t bit_width)
 {
   while(1) {
-    std::unique_lock<std::mutex> lock =
-      readConditional.waitFor([]{
-        std::cerr << "[Window] Waiting for read to be done..." << std::endl;
-        return readSemaphore == 0;
-      });
+    std::cerr << "[Window] Waiting for read to be done..." << std::endl;
+    while(readSemaphore != 0 && !stop);
 
-    readConditional.updateUnlockAndNotify(std::move(lock), [=] {
-      std::cerr << "[Window] Updating semaphore..." << std::endl;
-      readSemaphore -= n_levels;
-    });
+    if (stop) {
+      std::cerr << "[Window] Exiting" << std::endl;
+      return;
+    }
 
     std::cerr << "[Window] Artificial Spinning..." << std::endl;
     // artificial spinning to take up time
@@ -33,18 +31,16 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
     for (uint32_t i = 0; i < chunk_size; ++i) {
       acc += *(in_buf);
 
-      if (i == chunk_size/2) {
-        // try to signal reading thread
-        readConditional.notify_all();
-        std::cerr << "[Window] Hinting read... " << std::endl;
+      // if (i == chunk_size/2) {
+      //   // try to signal reading thread
+      //   readConditional.notify_all();
+      //   std::cerr << "[Window] Hinting read... " << std::endl;
 
-      }
+      // }
     }
 
+    readSemaphore -= n_levels;
+    // readConditional.notify_all();
     std::cerr << "[Window] Chunk done" << std::endl;
-    if (stop) {
-      std::cerr << "[Window] Exiting" << std::endl;
-      return;
-    }
   }
 }
