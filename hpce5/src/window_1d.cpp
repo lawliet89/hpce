@@ -48,6 +48,6 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
     if (current >= (in_buf + buf_size)) {
       current = in_buf;
     }
-    // std::cerr << "[Window] Chunk done " << acc << std::endl;
+    std::cerr << "[Window] Chunk done " << acc << "\n";
   }
 }
