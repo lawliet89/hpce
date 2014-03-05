@@ -8,6 +8,24 @@
 #include <iostream>
 #include <cstdio>
 #include <cmath>
+#include <mutex>
+#include <condition_variable>
+
+struct ConditionalMutex {
+	std::mutex m;
+	std::condition_variable cv;
+
+	template <typename Callable> std::unique_lock<std::mutex> waitFor(Callable callable) {
+	  std::unique_lock<std::mutex> lk(m);
+	  cv.wait(lk, callable);
+	  return lk;
+	}
+	template <typename Callable> void updateAndNotify(Callable callable) {
+	   std::lock_guard<std::mutex> lk(m);
+	   callable();
+	   cv.notify_all();
+	}
+};
 
 void processArgs(int argc, char *argv[], uint32_t &w, uint32_t &h,
                  uint32_t &bits, uint32_t &levels);

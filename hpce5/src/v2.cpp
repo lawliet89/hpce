@@ -3,8 +3,6 @@
 #include <unistd.h>
 
 #include <thread>
-#include <mutex>
-#include <condition_variable>
 
 /*
   Global Parameters
@@ -28,15 +26,15 @@ std::condition_variable readyCondition;
 uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
                    uint64_t imageSize);
 
-void work() {
-  std::unique_lock<std::mutex> lk(readyMutex);
-  readyCondition.wait(lk, []{ return start; });
+void work(ConditionalMutex &conditional) {
+  std::unique_lock<std::mutex> lk = conditional.waitFor([]{ return start; });
   std::cerr << "WORK WORK" << std::endl;
 }
 
 int main(int argc, char *argv[]) {
   try {
-    std::thread readThread(work);
+    ConditionalMutex conditional;
+    std::thread readThread(work, std::ref(conditional));
 
     processArgs(argc, argv, w, h, bits, levels);
     bufferSize = calculateBufferSize(w, h, bits, levels);
@@ -47,12 +45,10 @@ int main(int argc, char *argv[]) {
     std::cerr << "Pass Buffer Size: " << bufferSize << std::endl;
     std::cerr << "Chunk Size: " << chunkSize << std::endl;
 
-    {
-      std::lock_guard<std::mutex> lk(readyMutex);
+    conditional.updateAndNotify([] {
       start = true;
       std::cerr << "Ready!" << std::endl;
-    }
-    readyCondition.notify_all();
+    });
 
     readThread.join();
     // uint64_t chunkRead;
