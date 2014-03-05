@@ -6,7 +6,7 @@
 #include <thread>
 #include <atomic>
 
-uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
+void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
                    uint64_t imageSize, uint32_t levels,
                    ConditionalMutex &readConditional,
                    std::atomic<int> &readSemaphore);
@@ -54,11 +54,8 @@ int main(int argc, char *argv[]) {
                             std::ref(stop), std::ref(readConditional),
                             std::ref(readSemaphore));
 
-    uint64_t chunkRead;
-    while ((chunkRead =
-                readInput(bufferPass1, chunkSize, bufferSize, imageSize,
-                  levels, readConditional, readSemaphore))) {
-    }
+    readInput(bufferPass1, chunkSize, bufferSize, imageSize,
+      levels, readConditional, readSemaphore);
     // std::cerr << "[Read] Finished." << std::endl;
     stop = true;
     pass1Thread.join();
@@ -71,62 +68,63 @@ int main(int argc, char *argv[]) {
   }
 }
 
-uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
+void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
                    uint64_t imageSize, uint32_t levels,
                    ConditionalMutex &readConditional,
                    std::atomic<int> &readSemaphore) {
-  static uint8_t *readBuffer = nullptr;
-  static uint64_t bytesReadSoFar = 0;
 
-  // std::cerr << "[Read] Waiting to start read" << std::endl;
-  std::unique_lock<std::mutex> lock = readConditional.waitFor([&]{
-    // std::cerr << "[Read] Woken. Checking semaphore = "
-    //   << readSemaphore << std::endl;
-    return (readSemaphore < 0);
-  });
+  uint8_t *readBuffer = nullptr;
+  uint64_t bytesReadSoFar = 0;
+  while(1) {
+    // std::cerr << "[Read] Waiting to start read" << std::endl;
+    std::unique_lock<std::mutex> lock = readConditional.waitFor([&]{
+      // std::cerr << "[Read] Woken. Checking semaphore = "
+      //   << readSemaphore << std::endl;
+      return (readSemaphore < 0);
+    });
 
-  if (readBuffer == nullptr)
-    readBuffer = buffer;
+    if (readBuffer == nullptr)
+      readBuffer = buffer;
 
-  // uint8_t *outputStart = readBuffer;
+    // uint8_t *outputStart = readBuffer;
 
-  uint64_t bytesToRead = std::min(uint64_t(chunkSize), imageSize - bytesReadSoFar);
-  uint64_t bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
+    uint64_t bytesToRead = std::min(uint64_t(chunkSize), imageSize - bytesReadSoFar);
+    uint64_t bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
 
-  uint64_t finalBytesRead = bytesRead;
-  bytesReadSoFar += bytesRead;
-  readBuffer += bytesRead;
-
-  // End of all images
-  if (!bytesRead && bytesReadSoFar == 0)
-    return 0u;
-
-  while (bytesRead != bytesToRead) {
-    std::cerr << "Warning: Chunk was not read in its entirety " << bytesRead
-              << "/" << bytesToRead << "-- retrying" << std::endl;
-    bytesToRead = bytesToRead - bytesRead;
-    bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
-
+    uint64_t finalBytesRead = bytesRead;
     bytesReadSoFar += bytesRead;
     readBuffer += bytesRead;
-    finalBytesRead += bytesRead;
+
+    // End of all images
+    if (!bytesRead && bytesReadSoFar == 0)
+      return;
+
+    while (bytesRead != bytesToRead) {
+      std::cerr << "Warning: Chunk was not read in its entirety " << bytesRead
+                << "/" << bytesToRead << "-- retrying" << std::endl;
+      bytesToRead = bytesToRead - bytesRead;
+      bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
+
+      bytesReadSoFar += bytesRead;
+      readBuffer += bytesRead;
+      finalBytesRead += bytesRead;
+    }
+
+    if (bytesReadSoFar >= imageSize)
+      bytesReadSoFar = 0;
+    if (readBuffer >= buffer + bufferSize)
+      readBuffer = buffer;
+
+    // Test write to stdout
+    // uint64_t written = 0;
+    // while (written < finalBytesRead) {
+    //   written += write(STDOUT_FILENO, outputStart + written,
+    //     finalBytesRead - written);
+    // }
+
+    // std::cerr << "[Read] Read. Updating semaphore." << std::endl;
+    readSemaphore += levels;
+    lock.unlock();
+
   }
-
-  if (bytesReadSoFar >= imageSize)
-    bytesReadSoFar = 0;
-  if (readBuffer >= buffer + bufferSize)
-    readBuffer = buffer;
-
-  // Test write to stdout
-  // uint64_t written = 0;
-  // while (written < finalBytesRead) {
-  //   written += write(STDOUT_FILENO, outputStart + written,
-  //     finalBytesRead - written);
-  // }
-
-  // std::cerr << "[Read] Read. Updating semaphore." << std::endl;
-  readSemaphore += levels;
-  lock.unlock();
-
-  return finalBytesRead;
 }
