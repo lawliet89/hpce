@@ -12,13 +12,17 @@ struct ConditionalMutex {
 	  return lk;
 	}
 	template <typename Callable> void lockUpdateAndNotify(Callable callable) {
-	   std::lock_guard<std::mutex> lk(m);
+	   std::unique_lock<std::mutex> lk(m);
 	   callable();
+	   lk.unlock();
 	   cv.notify_all();
 	}
 
-	template <typename Callable> void updateAndNotify(Callable callable) {
+	template <typename Callable> void updateUnlockAndNotify(
+		std::unique_lock<std::mutex> &&lk, Callable callable) {
+
 	   callable();
+	   lk.unlock();
 	   cv.notify_all();
 	}
 
@@ -26,6 +30,7 @@ struct ConditionalMutex {
 	   std::unique_lock<std::mutex> lk(m, std::defer_lock);
 	   if (!lk.try_lock()) return false;
 	   callable();
+	   lk.unlock();
 	   cv.notify_all();
 	   return true;
 	}

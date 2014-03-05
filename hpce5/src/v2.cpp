@@ -9,7 +9,7 @@
 /*
   Global Parameters
 */
-uint32_t w, h, bits = 8, levels = 1, levelsAbs = 1;
+uint32_t w, h, bits = 8, levels = 1;
 uint64_t bufferSize, imageSize;
 uint32_t chunkSize;
 
@@ -32,7 +32,6 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
 int main(int argc, char *argv[]) {
   try {
     processArgs(argc, argv, w, h, bits, levels);
-    levelsAbs = abs(levels);
 
     bufferSize = calculateBufferSize(w, h, bits, levels);
     chunkSize = calculateChunkSize(w, h, bits, levels, bufferSize);
@@ -43,7 +42,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "Chunk Size: " << chunkSize << std::endl;
 
     // Set up concurrency
-    readSemaphore = abs(levels) * -1;
+    readSemaphore = levels * -1;
     std::thread pass1Thread(window_1d, bufferPass1, nullptr, bufferSize,
                             chunkSize, w, h, levels, bits);
 
@@ -116,9 +115,9 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
   }
 
   std::cerr << "[Read] Read. Notifying" << std::endl;
-
-  lock.unlock();
-  readSemaphore += levelsAbs;
+  readConditional.updateUnlockAndNotify(std::move(lock), [] {
+    readSemaphore += levels;
+  });
 
   return finalBytesRead;
 }

@@ -16,11 +16,16 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
                const uint8_t bit_width)
 {
   while(1) {
-    std::cerr << "[Window] Waiting for read to be done..." << std::endl;
-    // Synchronise all "threads"
-    while (readSemaphore != 0); // spin
-    std::cerr << "[Window] Semaphore = 0" << std::endl;
-    readSemaphore -= n_levels;
+    std::unique_lock<std::mutex> lock =
+      readConditional.waitFor([]{
+        std::cerr << "[Window] Waiting for read to be done..." << std::endl;
+        return readSemaphore == 0;
+      });
+
+    readConditional.updateUnlockAndNotify(std::move(lock), [=] {
+      std::cerr << "[Window] Updating semaphore..." << std::endl;
+      readSemaphore -= n_levels;
+    });
 
     std::cerr << "[Window] Artificial Spinning..." << std::endl;
     // artificial spinning to take up time

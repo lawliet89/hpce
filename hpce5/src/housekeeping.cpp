@@ -32,8 +32,9 @@ void processArgs(int argc, char *argv[], uint32_t &w, uint32_t &h,
   }
 
   levels = 1;
+  // TODO: Handle negative i.e. direction
   if (argc > 4) {
-    levels = atoi(argv[4]);
+    levels = abs(atoi(argv[4]));
   }
 
   if (abs(levels) > std::min(std::min(w / 4u, h / 4u), 64u)) {
