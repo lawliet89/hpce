@@ -1,5 +1,5 @@
-#ifndef Housekeeping_H
-#define Housekeeping_H
+#ifndef HOUSEKEEPING_H_
+#define HOUSEKEEPING_H_
 
 #include <cassert>
 #include <stdexcept>
@@ -21,4 +21,4 @@ uint64_t calculateChunkSize(uint32_t w, uint32_t h, uint32_t bits,
 uint8_t *allocateBuffer(uint64_t size, bool maximise = false);
 void deallocateBuffer(uint8_t *buffer);
 
-#endif // Housekeeping_H
+#endif // HOUSEKEEPING_H_
