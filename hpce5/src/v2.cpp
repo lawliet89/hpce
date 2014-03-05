@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     while ((chunkRead =
                 readInput(bufferPass1, chunkSize, bufferSize, imageSize))) {
     }
-    std::cerr << "[Read] Finished." << std::endl;
+    // std::cerr << "[Read] Finished." << std::endl;
     stop = true;
     pass1Thread.join();
 
@@ -72,17 +72,17 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
   static uint8_t *readBuffer = nullptr;
   static uint64_t bytesReadSoFar = 0;
 
-  std::cerr << "[Read] Waiting to start read" << std::endl;
+  // std::cerr << "[Read] Waiting to start read" << std::endl;
   std::unique_lock<std::mutex> lock = readConditional.waitFor([]{
-    std::cerr << "[Read] Woken. Checking semaphore = "
-      << readSemaphore << std::endl;
+    // std::cerr << "[Read] Woken. Checking semaphore = "
+    //   << readSemaphore << std::endl;
     return (readSemaphore < 0);
   });
 
   if (readBuffer == nullptr)
     readBuffer = buffer;
 
-  uint8_t *outputStart = readBuffer;
+  // uint8_t *outputStart = readBuffer;
 
   uint64_t bytesToRead = std::min(uint64_t(chunkSize), imageSize - bytesReadSoFar);
   uint64_t bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
@@ -112,13 +112,13 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
     readBuffer = buffer;
 
   // Test write to stdout
-  uint64_t written = 0;
-  while (written < finalBytesRead) {
-    written += write(STDOUT_FILENO, outputStart + written,
-      finalBytesRead - written);
-  }
+  // uint64_t written = 0;
+  // while (written < finalBytesRead) {
+  //   written += write(STDOUT_FILENO, outputStart + written,
+  //     finalBytesRead - written);
+  // }
 
-  std::cerr << "[Read] Read. Updating semaphore." << std::endl;
+  // std::cerr << "[Read] Read. Updating semaphore." << std::endl;
   readSemaphore += levels;
   lock.unlock();
 
