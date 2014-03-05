@@ -80,7 +80,8 @@ uint64_t readInput(uint8_t *buffer, uint64_t chunkSize, uint64_t bufferSize,
   // Test write to stdout
   uint64_t written = 0;
   while (written < finalBytesRead) {
-    written += write(STDOUT_FILENO, outputStart, finalBytesRead - written);
+    written += write(STDOUT_FILENO, outputStart + written,
+      finalBytesRead - written);
   }
 
   return finalBytesRead;
