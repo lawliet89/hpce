@@ -31,16 +31,14 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
     for (uint32_t i = 0; i < chunk_size; ++i) {
       acc += *(in_buf);
 
-      // if (i == chunk_size/2) {
-      //   // try to signal reading thread
-      //   readConditional.notify_all();
-      //   std::cerr << "[Window] Hinting read... " << std::endl;
+      if (i == chunk_size/2) {
+        // try to signal reading thread
+        readConditional.notify_all();
+        std::cerr << "[Window] Hinting read... " << std::endl;
 
-      // }
+      }
     }
-
-    readSemaphore -= n_levels;
-    // readConditional.notify_all();
+    readConditional.lockUpdateAndNotify([=] { readSemaphore -= n_levels; });
     std::cerr << "[Window] Chunk done" << std::endl;
   }
 }
