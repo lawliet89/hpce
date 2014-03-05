@@ -1,3 +1,4 @@
+#include "include/window_1d.hpp"
 // does 1d rolling window min/max over the given chunks of rows and accumulates
 // results vertically
 void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,

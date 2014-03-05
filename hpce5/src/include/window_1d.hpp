@@ -1,5 +1,6 @@
 #ifndef WINDOW_1D_H_
 #define WINDOW_1D_H_
+#include <cstdint>
 
 // holds value and retirement index of ascending minima or descending maxima
 // TODO: push into anonymous scope
@@ -10,7 +11,7 @@ struct win_queue_entry
 };
 
 
-// scans 
+// scans
 
 //TODO: out_buf
 //TODO: remove bitwidth via specialisation

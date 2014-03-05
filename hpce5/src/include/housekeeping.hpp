@@ -2,6 +2,7 @@
 #define HOUSEKEEPING_H_
 
 #include <cassert>
+#include <cstdint>
 #include <stdexcept>
 #include <algorithm>
 #include <iostream>
