@@ -7,6 +7,22 @@ bits=8
 levels=1
 copies=1
 
+if [[ $# -gt 1 ]]; then
+	width=$1;
+fi
+if [[ $# -gt 2 ]]; then
+	height=$1;
+fi
+if [[ $# -gt 3 ]]; then
+	bits=$3;
+fi
+if [[ $# -gt 4 ]]; then
+	levels=$4;
+fi
+if [[ $# -gt 5 ]]; then
+	copies=$5;
+fi
+
 bytes=$(($width*$height*$bits/8))
 
 make process

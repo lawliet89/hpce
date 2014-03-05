@@ -91,38 +91,28 @@ void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
     uint64_t bytesToRead = std::min(uint64_t(chunkSize), imageSize - bytesReadSoFar);
     uint64_t bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
 
-    uint64_t finalBytesRead = bytesRead;
-    bytesReadSoFar += bytesRead;
-    readBuffer += bytesRead;
-
     // End of all images
     if (!bytesRead && bytesReadSoFar == 0) {
       consumerStop = true;
       return;
     }
 
-    while (bytesRead != bytesToRead) {
+    while (bytesRead < bytesToRead) {
       std::cerr << "Warning: Chunk was not read in its entirety " << bytesRead
                 << "/" << bytesToRead << "-- retrying" << std::endl;
-      bytesToRead = bytesToRead - bytesRead;
-      bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
-
-      bytesReadSoFar += bytesRead;
-      readBuffer += bytesRead;
-      finalBytesRead += bytesRead;
+      bytesRead += read(STDIN_FILENO, readBuffer + bytesRead,
+        bytesToRead - bytesRead);
     }
 
-    if (bytesReadSoFar >= imageSize)
+    // Always go by chunkSize
+    bytesReadSoFar += chunkSize;
+    readBuffer += chunkSize;
+
+    assert(bytesReadSoFar <= imageSize);
+    if (bytesReadSoFar == imageSize)
       bytesReadSoFar = 0;
     if (readBuffer >= buffer + bufferSize)
       readBuffer = buffer;
-
-    // Test write to stdout
-    // uint64_t written = 0;
-    // while (written < finalBytesRead) {
-    //   written += write(STDOUT_FILENO, outputStart + written,
-    //     finalBytesRead - written);
-    // }
 
     // std::cerr << "[Read] Read. Updating semaphore." << std::endl;
     readSemaphore += levels;
