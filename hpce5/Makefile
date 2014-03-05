@@ -6,7 +6,7 @@ all: process src/v1
 
 #src/housekeeping.o: src/include/housekeeping.hpp
 
-housekeeping = src/housekeeping.o
+housekeeping = src/housekeeping.cpp
 src/v1: $(housekeeping)
 
 .PHONY: all

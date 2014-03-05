@@ -2,6 +2,7 @@
 #define WINDOW_1D_H_
 
 // holds value and retirement index of ascending minima or descending maxima
+// TODO: push into anonymous scope
 struct win_queue_entry
 {
   uint32_t value;

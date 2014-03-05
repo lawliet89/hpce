@@ -3,3 +3,4 @@ process
 v1
 *.dat
 temp/*
+*.swp
