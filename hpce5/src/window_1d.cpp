@@ -15,7 +15,7 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
     uint8_t *current = in_buf, *inBufEnd = in_buf + buf_size;
     uint8_t *currentWrite = out_buf, *outBufEnd = out_buf + buf_size;
     uint64_t bytesSoFar = 0;
-    uint64_t imageSize = img_width_pix * img_width_pix * bit_width/8;
+    uint64_t imageSize = img_width_pix * img_height_pix * bit_width/8;
 
     while(1) {
       producer.consumerWait();

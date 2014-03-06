@@ -9,7 +9,6 @@ class ReadWriteSync {
   bool debug = false;
   std::string name;
 
-
   const int quanta = 1;
   std::mutex m;
   std::condition_variable cv;
