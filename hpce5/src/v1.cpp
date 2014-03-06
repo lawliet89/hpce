@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     uint64_t chunkRead;
     while ((chunkRead =
                 readInput(bufferPass1, chunkSize, bufferSize, imageSize))) {
-      window_1d(bufferPass1, nullptr, bufferSize, chunkSize, w, levels, bits);
+      window_1d(bufferPass1, nullptr, bufferSize, chunkSize, w, h, levels, bits);
     }
 
     deallocateBuffer(bufferPass1);
@@ -55,24 +55,20 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
   uint64_t bytesToRead = std::min(uint64_t(chunkSize), imageSize - bytesReadSoFar);
   uint64_t bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
 
-  uint64_t finalBytesRead = bytesRead;
-  bytesReadSoFar += bytesRead;
-  readBuffer += bytesRead;
-
   // End of all images
-  if (!bytesRead && readBuffer == buffer)
+  if (!bytesRead && bytesReadSoFar == 0)
     return 0u;
 
-  while (bytesRead != bytesToRead) {
+  while (bytesRead < bytesToRead) {
     std::cerr << "Warning: Chunk was not read in its entirety " << bytesRead
               << "/" << bytesToRead << "-- retrying" << std::endl;
-    bytesToRead = bytesToRead - bytesRead;
-    bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
-
-    bytesReadSoFar += bytesRead;
-    readBuffer += bytesRead;
-    finalBytesRead += bytesRead;
+    bytesRead += read(STDIN_FILENO, readBuffer + bytesRead,
+      bytesToRead - bytesRead);
   }
+
+  // Always go by chunkSize
+  bytesReadSoFar += chunkSize;
+  readBuffer += chunkSize;
 
   if (bytesReadSoFar >= imageSize)
     bytesReadSoFar = 0;
@@ -86,5 +82,5 @@ uint64_t readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
   //     finalBytesRead - written);
   // }
 
-  return finalBytesRead;
+  return bytesToRead;
 }
