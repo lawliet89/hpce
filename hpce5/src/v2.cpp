@@ -36,6 +36,11 @@ int main(int argc, char *argv[]) {
 
     processArgs(argc, argv, w, h, bits, levels);
 
+    if (levels == 0) {
+      trivialPassthrough();
+      return 0;
+    }
+
     bufferSize = calculateBufferSize(w, h, bits, levels);
     chunkSize = calculateChunkSize(w, h, bits, levels, bufferSize);
 
@@ -61,6 +66,7 @@ int main(int argc, char *argv[]) {
     pass1Thread.join();
 
     deallocateBuffer(bufferPass1);
+    return 0;
   }
   catch (std::exception &e) {
     std::cerr << "Caught exception : " << e.what() << "\n";
@@ -86,8 +92,6 @@ void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
     if (readBuffer == nullptr)
       readBuffer = buffer;
 
-    // uint8_t *outputStart = readBuffer;
-
     uint64_t bytesToRead = std::min(uint64_t(chunkSize), imageSize - bytesReadSoFar);
     uint64_t bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
 
@@ -98,8 +102,8 @@ void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
     }
 
     while (bytesRead < bytesToRead) {
-      std::cerr << "Warning: Chunk was not read in its entirety " << bytesRead
-                << "/" << bytesToRead << "-- retrying" << std::endl;
+      // std::cerr << "Warning: Chunk was not read in its entirety " << bytesRead
+      //           << "/" << bytesToRead << "-- retrying" << std::endl;
       bytesRead += read(STDIN_FILENO, readBuffer + bytesRead,
         bytesToRead - bytesRead);
     }
@@ -117,6 +121,6 @@ void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
     // std::cerr << "[Read] Read. Updating semaphore." << std::endl;
     readSemaphore += levels;
     lock.unlock();
-
+    readConditional.notify_all();
   }
 }

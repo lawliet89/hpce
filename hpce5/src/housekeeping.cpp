@@ -1,5 +1,6 @@
 #include "include/housekeeping.hpp"
 #include <cstring>
+#include <unistd.h>
 
 void processArgs(int argc, char *argv[], uint32_t &w, uint32_t &h,
                  uint32_t &bits, uint32_t &levels) {
@@ -98,3 +99,13 @@ void oneiseBuffer(uint8_t *buffer, uint64_t size) {
 }
 
 void deallocateBuffer(uint8_t *buffer) { delete[] buffer; }
+
+void trivialPassthrough() {
+  uint8_t *buffer = new uint8_t[4096];
+  uint64_t bytesRead;
+  while(1) {
+    bytesRead = read(STDIN_FILENO, buffer, 4096);
+    if (!bytesRead) return;
+    write(STDOUT_FILENO, buffer, bytesRead);
+  }
+}

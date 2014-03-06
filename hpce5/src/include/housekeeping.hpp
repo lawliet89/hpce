@@ -25,5 +25,6 @@ void deallocateBuffer(uint8_t *buffer);
 void zeroiseBuffer(uint8_t *buffer, uint64_t size);
 void oneiseBuffer(uint8_t *buffer, uint64_t size);
 
+void trivialPassthrough();
 
 #endif // HOUSEKEEPING_H_
