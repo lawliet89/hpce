@@ -4,24 +4,34 @@
 #include <condition_variable>
 #include <atomic>
 #include <iostream>
+#include <cstring>
 
 class ReadWriteSync {
-  const bool debug = false;
+  bool debug = false;
   const int quanta = 1;
   std::mutex m;
   std::condition_variable cv;
   std::atomic<int> semaphore;
   bool _eof = false;
+  std::string name;
 
 public:
-  ReadWriteSync() : semaphore(quanta * -1) { }
+  ReadWriteSync() : semaphore(quanta * -1), name("") {
+    if (getenv("HPCE_DEBUG") && strcmp(getenv("HPCE_DEBUG"), "true")){
+      debug = true;
+    }
+  }
+
+  void setName(std::string name) {
+    this -> name = name;
+  }
 
   std::unique_lock<std::mutex> producerWait() {
     if (debug)
-      std::cerr << "[Read] Waiting to start read" << std::endl;
+      std::cerr << "[" << name << " Read] Waiting to start read" << std::endl;
     return waitFor([&] {
       if (debug) {
-        std::cerr << "[Read] Woken. Checking semaphore = "
+        std::cerr << "[" << name << " Read] Woken. Checking semaphore = "
            << semaphore << std::endl;
       }
       return semaphore < 0;
@@ -30,7 +40,8 @@ public:
 
   void produce(std::unique_lock<std::mutex> &&lk) {
     if (debug)
-      std::cerr << "[Read] Read done. Updating semaphore." << std::endl;
+      std::cerr << "[" << name << " Read] Read done. Updating semaphore."
+                << std::endl;
     return updateUnlockAndNotify(std::move(lk), [&]{
       semaphore += quanta;
     });
@@ -43,19 +54,20 @@ public:
   // spin and spin
   void consumerWait() {
     if (debug)
-      std::cerr << "[Window] Waiting for read to be done..." << std::endl;
+      std::cerr << "[" << name << " Consume] Waiting for read to be done..."
+                << std::endl;
     while (semaphore != 0 && !_eof);
   }
 
   void consume() {
     lockAndUpdate([&] { semaphore -= quanta; });
     if (debug)
-      std::cerr << "[Window] Consumed" << std::endl;
+      std::cerr << "[" << name << " Consume] Consumed" << std::endl;
   }
 
   void hintProducer() {
     if (debug)
-      std::cerr << "[Window] Hinting read... " << std::endl;
+      std::cerr << "[" << name << " Consume] Hinting read... " << std::endl;
     cv.notify_all();
   }
 

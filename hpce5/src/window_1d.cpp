@@ -1,46 +1,53 @@
 #include "include/window_1d.hpp"
 #include <unistd.h>
 #include <iostream>
+#include <mutex>
 
 // does 1d rolling window min/max over the given chunks of rows and accumulates
 // results vertically
 void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
                const uint32_t chunk_size, const uint32_t img_width_pix,
                const uint32_t img_height_pix, const uint32_t n_levels,
-               const uint8_t bit_width, ReadWriteSync &sync)
+               const uint8_t bit_width, ReadWriteSync &producer,
+               ReadWriteSync &consumer)
 {
   try{
-    uint8_t *current = in_buf;
+    uint8_t *current = in_buf, *inBufEnd = in_buf + buf_size;
+    uint8_t *currentWrite = out_buf, *outBufEnd = out_buf + buf_size;
 
     while(1) {
-      sync.consumerWait();
+      producer.consumerWait();
 
-      if (sync.eof()) {
-        // std::cerr << "[Window] Exiting" << std::endl;
+      if (producer.eof()) {
+        consumer.signalEof();
         return;
       }
 
-      sync.consume();
+      producer.consume();
+      std::unique_lock<std::mutex> lock = consumer.producerWait();
 
       // std::cerr << "[Window] Artificial Spinning..." << std::endl;
       // artificial spinning to take up time
       uint64_t acc = 0;
       for (uint32_t i = 0; i < chunk_size; ++i) {
-        acc += *(current);
+        *(currentWrite + i) = *(current + i);
 
         if (i == chunk_size/2) {
           // try to signal reading thread
-          sync.hintProducer();
+          producer.hintProducer();
 
         }
       }
-
-      // Test write
-      write(STDOUT_FILENO, current, chunk_size);
+      consumer.produce(std::move(lock));
 
       current += chunk_size;
-      if (current >= (in_buf + buf_size)) {
+      if (current >= inBufEnd) {
         current = in_buf;
+      }
+
+      currentWrite += chunk_size;
+      if (currentWrite >= outBufEnd) {
+        currentWrite = out_buf;
       }
       // std::cerr << "[Window] Chunk done " << acc << "\n";
     }
