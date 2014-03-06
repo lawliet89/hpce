@@ -6,11 +6,12 @@
 #include <thread>
 #include <atomic>
 
-void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
-               uint64_t imageSize, ReadWriteSync &sync);
+void readInput(uint8_t* const buffer, const uint32_t chunkSize, const uint64_t bufferSize,
+               const uint64_t imageSize, ReadWriteSync &sync, uint8_t* const intermediateBuffer,
+               const Operation firstOp);
 
-void writeOutput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
-                 uint64_t imageSize, ReadWriteSync &sync);
+void writeOutput(uint8_t* const buffer, const uint32_t chunkSize, const uint64_t bufferSize,
+                 const uint64_t imageSize, ReadWriteSync &sync);
 
 int main(int argc, char *argv[]) {
   try {
@@ -20,6 +21,7 @@ int main(int argc, char *argv[]) {
     uint32_t w, h, bits = 8, levels = 1;
     uint64_t bufferSize, imageSize;
     uint32_t chunkSize;
+    Operation firstOp;
 
     /*
       Global Buffers
@@ -36,7 +38,7 @@ int main(int argc, char *argv[]) {
     passSync.setName("intermediate");
     stdoutSync.setName("stdout");
 
-    processArgs(argc, argv, w, h, bits, levels);
+    processArgs(argc, argv, w, h, bits, levels, firstOp);
 
     if (levels == 0) {
       trivialPassthrough();
@@ -69,7 +71,8 @@ int main(int argc, char *argv[]) {
     std::thread writeThread(writeOutput, stdoutBuffer, chunkSize, bufferSize,
                             imageSize, std::ref(stdoutSync));
 
-    readInput(stdinBuffer, chunkSize, bufferSize, imageSize, stdinSync);
+    readInput(stdinBuffer, chunkSize, bufferSize, imageSize, stdinSync,
+             intermediateBuffer, firstOp);
 
     pass1Thread.join();
     pass2Thread.join();
@@ -86,8 +89,9 @@ int main(int argc, char *argv[]) {
   }
 }
 
-void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
-                   uint64_t imageSize, ReadWriteSync &sync) {
+void readInput(uint8_t* const buffer, const uint32_t chunkSize, const uint64_t bufferSize,
+               const uint64_t imageSize, ReadWriteSync &sync, uint8_t* const intermediateBuffer,
+               const Operation firstOp) {
 
   uint8_t *readBuffer = buffer;
   uint64_t bytesReadSoFar = 0;
@@ -114,19 +118,35 @@ void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
     bytesReadSoFar += chunkSize;
     readBuffer += chunkSize;
 
-    if (bytesReadSoFar >= imageSize) {
-      bytesReadSoFar = 0;
-      std::cerr << "[Read] Image Boundary" << std::endl;
-    }
     if (readBuffer >= buffer + bufferSize)
       readBuffer = buffer;
 
     sync.produce(std::move(lock));
+
+    if (bytesReadSoFar >= imageSize) {
+      std::cerr << "[Read] Image Boundary. Waitng for reset..." << std::endl;
+      std::unique_lock<std::mutex> resetLock = sync.waitForReset();
+
+      // Perform resets
+      bytesReadSoFar = 0;
+      readBuffer = buffer;
+
+      if (firstOp == Operation::ERODE) {
+        oneiseBuffer(buffer, bufferSize);
+        zeroiseBuffer(intermediateBuffer, bufferSize);
+      } else {
+        oneiseBuffer(intermediateBuffer, bufferSize);
+        zeroiseBuffer(buffer, bufferSize);
+      }
+
+      std::cerr << "[Read] Reset" << std::endl;
+      sync.resetDone(std::move(resetLock));
+    }
   }
 }
 
-void writeOutput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
-                 uint64_t imageSize, ReadWriteSync &sync) {
+void writeOutput(uint8_t* const buffer, const uint32_t chunkSize, const uint64_t bufferSize,
+                 const uint64_t imageSize, ReadWriteSync &sync){
 
   uint8_t *current = buffer;
   uint64_t bytesSoFar = 0u;
@@ -145,15 +165,17 @@ void writeOutput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
     bytesSoFar += chunkSize;
     current += chunkSize;
 
-    if (bytesSoFar >= imageSize) {
-      bytesSoFar = 0;
-      std::cerr << "[Write] Image Boundary" << std::endl;
-    }
-
     if (current >= buffer + bufferSize)
       current = buffer;
 
     sync.consume();
     sync.hintProducer();
+
+    if (bytesSoFar >= imageSize) {
+      bytesSoFar = 0;
+      current = buffer;
+      std::cerr << "[Write] Image Boundary. Signalling reset." << std::endl;
+      sync.signalReset();
+    }
   }
 }

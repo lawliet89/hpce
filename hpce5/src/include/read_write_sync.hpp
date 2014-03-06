@@ -7,6 +7,8 @@
 
 class ReadWriteSync {
   bool debug = false;
+  std::string name;
+
 
   const int quanta = 1;
   std::mutex m;
@@ -14,8 +16,6 @@ class ReadWriteSync {
   std::atomic<int> semaphore;
 
   bool _eof = false;
-
-  std::string name;
 
   std::mutex resetMutex;
   std::condition_variable resetCv;
@@ -43,7 +43,9 @@ public:
 
   bool eof();
 
-  void waitForReset();
+  std::unique_lock<std::mutex> waitForReset();
+  void resetDone(std::unique_lock<std::mutex> &&lk);
   void signalReset();
 };
+
 #endif

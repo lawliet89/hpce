@@ -59,6 +59,29 @@ bool ReadWriteSync::eof() {
   return _eof;
 }
 
-void ReadWriteSync::waitForReset() {
+std::unique_lock<std::mutex> ReadWriteSync::waitForReset() {
+  std::unique_lock<std::mutex> lk(resetMutex);
+  if (debug)
+    std::cerr << "[" << name << " Read] Waiting for reset.. " << std::endl;
+  resetCv.wait(lk, [&] {
+    return reset;
+  });
+  if (debug)
+    std::cerr << "[" << name << " Read] Resetting " << std::endl;
+  return lk;
+}
 
+void ReadWriteSync::resetDone(std::unique_lock<std::mutex> &&lk) {
+  reset = false;
+  lk.unlock();
+  resetCv.notify_all();
+}
+
+void ReadWriteSync::signalReset() {
+  std::unique_lock<std::mutex> lk(resetMutex);
+  if (debug)
+    std::cerr << "[" << name << " Consume] Signalling Reset.. " << std::endl;
+  reset = true;
+  lk.unlock();
+  resetCv.notify_all();
 }

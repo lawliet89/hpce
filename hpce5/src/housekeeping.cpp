@@ -3,7 +3,7 @@
 #include <unistd.h>
 
 void processArgs(int argc, char *argv[], uint32_t &w, uint32_t &h,
-                 uint32_t &bits, uint32_t &levels) {
+                 uint32_t &bits, uint32_t &levels, Operation &firstOp) {
   if (argc < 3) {
     fprintf(stderr, "Usage: process width height [bits] [levels]\n");
     fprintf(stderr, "   bits=8 by default\n");
@@ -33,10 +33,15 @@ void processArgs(int argc, char *argv[], uint32_t &w, uint32_t &h,
   }
 
   levels = 1;
+  int levelsRaw = levels;
   // TODO: Handle negative i.e. direction
   if (argc > 4) {
-    levels = abs(atoi(argv[4]));
+    levelsRaw = atoi(argv[4]);
+    levels = abs(levelsRaw);
   }
+
+  if (levelsRaw < 0) firstOp = Operation::DILATE;
+  else if (levelsRaw > 0) firstOp = Operation::ERODE;
 
   if (abs(levels) > std::min(std::min(w / 4u, h / 4u), 64u)) {
     throw std::invalid_argument(

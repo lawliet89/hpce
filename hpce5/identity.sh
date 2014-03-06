@@ -5,6 +5,7 @@ height=$((2<<12))
 bits=8
 copies=1
 levels=3
+HPCE_DEBUG="true"
 
 if [[ $# -gt 0 ]]; then
 	width=$1;

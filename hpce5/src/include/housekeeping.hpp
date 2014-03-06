@@ -9,8 +9,10 @@
 #include <cstdio>
 #include <cmath>
 
+enum class Operation {ERODE, DILATE};
+
 void processArgs(int argc, char *argv[], uint32_t &w, uint32_t &h,
-                 uint32_t &bits, uint32_t &levels);
+                 uint32_t &bits, uint32_t &levels, Operation &firstOp);
 constexpr uint64_t calculateImageSize(uint32_t w, uint32_t h, uint32_t bits) {
   return w * h * bits / 8lu;
 }
