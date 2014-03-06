@@ -1,4 +1,5 @@
 #include "include/window_1d.hpp"
+#include <algorithm>
 
 // does 1d rolling window min/max over the given chunks of rows and accumulates
 // results vertically
@@ -14,6 +15,7 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
   static uint64_t chunks_per_img;
 
   static uint64_t chunk_cnt;  // counter
+  static uint32_t row_cnt;
   static uint8_t* curr_chunk;
 
   // window state
@@ -31,6 +33,7 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
     img_w_bytes = (img_width_pix * 8) / bit_width;
     chunks_per_img = ((img_height * img_w_bytes) + chunk_size - 1) / chunk_size;
     chunk_cnt = 0;
+    row_cnt = 0;
     curr_chunk = in_buf;
 
     // create and initialise rolling windows
@@ -57,11 +60,21 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
         ws->q_head->value = 0xffffffff;  // TODO: max different
         ws->q_head->retire_idx = ws->window_size;
       }
+      row_cnt++;
       // TODO
       fprintf(stderr, "\nROWINIT\n");
     }
 
     uint8_t curr_val = *(curr_chunk + j);
+
+    //TODO
+    if (row_cnt > n_levels){
+      uint8_t *acc0 = curr_chunk + j - (2*n_levels)*img_w_bytes;
+      acc0 += (acc0<in_buf ? buf_size : 0);
+      //fprintf(stderr, "<<<< [%d] thing 2n above: %x\n", ws->window_size, *(acc0));
+      fprintf(stderr, "OUT: %2x\n", std::min(*acc0, curr_val));
+    }
+    //TODO
 
     // step all windows by 1
     for (int m = 0; m < num_windows_assigned; ++m) {
@@ -88,9 +101,22 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
         ws->q_tail->value = curr_val;
         ws->q_tail->retire_idx = i + ws->window_size;
       }
+
+      //TODO
+      //uint8_t *thispix = curr_chunk+j;
+      uint8_t *acc1 = curr_chunk + j - n_depth*img_w_bytes - n_depth;
+      acc1 += (acc1<in_buf ? buf_size : 0);
+      uint8_t *acc2 = curr_chunk + j - (2*n_levels - n_depth)*img_w_bytes - n_depth;
+      acc2 += (acc2<in_buf ? buf_size : 0);
+
       if (i >= n_depth) {
-        // out[i] = ws->q_head->value;
-        fprintf(stderr, "[%d] %2d: %x\n", ws->window_size, i, ws->q_head->value);
+        ////// out[i] = ws->q_head->value;
+        //fprintf(stderr, "[%d] %2d: %x\n", ws->window_size, i, ws->q_head->value);
+        //fprintf(stderr, ">> [%d] thing above: %x\n", ws->window_size, *acc1);
+        *acc1 = std::min(*acc1, (uint8_t) ws->q_head->value);
+        *acc2 = std::min(*acc2, (uint8_t) ws->q_head->value);
+        //fprintf(stderr, ">2 [%d] thing above: %x\n", ws->window_size, *acc2);
+      
       }
       // special drain
       if (i == img_w_bytes - 1) {
@@ -100,8 +126,13 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
             ws->q_head++;
             if (ws->q_head >= end) ws->q_head = ws->start;
           }
-          fprintf(stderr, "[%d] %2d+%2d: %x\n", ws->window_size, i, ii,
-                 ws->q_head->value);
+          //fprintf(stderr, "[%d] %2d+%2d: %x\n", ws->window_size, i, ii,
+           //      ws->q_head->value);
+          //fprintf(stderr, ">> [%d] thing above: %x\n", ws->window_size, *(acc1+ii));
+          //fprintf(stderr, ">2 [%d] thing above: %x\n", ws->window_size, *(acc2+ii));
+        *(acc1+ii) = std::min(*(acc1+ii), (uint8_t) ws->q_head->value);
+        *(acc2+ii) = std::min(*(acc2+ii), (uint8_t) ws->q_head->value);
+        //TODO +ii guaranteed to not wrap?
         }
       }
     }
