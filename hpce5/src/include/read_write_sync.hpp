@@ -3,7 +3,6 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
-#include <iostream>
 #include <cstring>
 
 class ReadWriteSync {
@@ -22,96 +21,32 @@ public:
     }
   }
 
-  void setName(std::string name) {
-    this -> name = name;
-  }
+  void setName(std::string name);
+  std::unique_lock<std::mutex> producerWait();
 
-  std::unique_lock<std::mutex> producerWait() {
-    if (debug)
-      std::cerr << "[" << name << " Read] Waiting to start read" << std::endl;
-    return waitFor([&] {
-      if (debug) {
-        std::cerr << "[" << name << " Read] Woken. Checking semaphore = "
-           << semaphore << std::endl;
-      }
-      return semaphore < 0;
-    });
-  }
+  void produce(std::unique_lock<std::mutex> &&lk);
 
-  void produce(std::unique_lock<std::mutex> &&lk) {
-    if (debug)
-      std::cerr << "[" << name << " Read] Read done. Updating semaphore."
-                << std::endl;
-    return updateUnlockAndNotify(std::move(lk), [&]{
-      semaphore += quanta;
-    });
-  }
-
-  void signalEof() {
-    _eof = true;
-  }
+  void signalEof();
 
   // spin and spin
-  void consumerWait() {
-    if (debug)
-      std::cerr << "[" << name << " Consume] Waiting for read to be done..."
-                << std::endl;
-    while (semaphore != 0 && !_eof);
-  }
+  void consumerWait();
+  void consume();
 
-  void consume() {
-    lockAndUpdate([&] { semaphore -= quanta; });
-    if (debug)
-      std::cerr << "[" << name << " Consume] Consumed" << std::endl;
-  }
+  void hintProducer();
 
-  void hintProducer() {
-    if (debug)
-      std::cerr << "[" << name << " Consume] Hinting read... " << std::endl;
-    cv.notify_all();
-  }
-
-  bool eof() {
-    return _eof;
-  }
+  bool eof();
 
 private:
 
-  template <typename Callable> std::unique_lock<std::mutex> waitFor(
-      Callable callable) {
-    std::unique_lock<std::mutex> lk(m);
-    cv.wait(lk, callable);
-    return lk;
-  }
+  std::unique_lock<std::mutex> waitFor(std::function<bool()> callable);
 
-  template <typename Callable> void lockAndUpdate(Callable callable) {
-     std::unique_lock<std::mutex> lk(m);
-     callable();
-     lk.unlock();
-  }
+  void lockAndUpdate(std::function<void()> callable);
 
-  template <typename Callable> void lockUpdateAndNotify(Callable callable) {
-     std::unique_lock<std::mutex> lk(m);
-     callable();
-     lk.unlock();
-     cv.notify_all();
-  }
+  void lockUpdateAndNotify(std::function<void()> callable);
 
-  template <typename Callable> void updateUnlockAndNotify(
-    std::unique_lock<std::mutex> &&lk, Callable callable) {
+  void updateUnlockAndNotify(
+    std::unique_lock<std::mutex> &&lk, std::function<void()> callable);
 
-     callable();
-     lk.unlock();
-     cv.notify_all();
-  }
-
-  template <typename Callable> bool tryLockUpdateAndNotify(Callable callable) {
-     std::unique_lock<std::mutex> lk(m, std::defer_lock);
-     if (!lk.try_lock()) return false;
-     callable();
-     lk.unlock();
-     cv.notify_all();
-     return true;
-  }
+  bool tryLockUpdateAndNotify(std::function<void()> callable);
 };
 #endif
