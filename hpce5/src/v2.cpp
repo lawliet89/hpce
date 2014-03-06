@@ -1,5 +1,5 @@
 #include "include/housekeeping.hpp"
-#include "include/conditional_mutex.hpp"
+#include "include/read_write_sync.hpp"
 #include "include/window_1d.hpp"
 #include <unistd.h>
 
@@ -8,8 +8,7 @@
 
 void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
                    uint64_t imageSize, uint32_t levels,
-                   ConditionalMutex &readConditional,
-                   std::atomic<int> &readSemaphore, bool &consumerStop);
+                   ReadWriteSync &sync);
 
 int main(int argc, char *argv[]) {
   try {
@@ -28,11 +27,7 @@ int main(int argc, char *argv[]) {
     /*
       Global Synchronisation Primitives
     */
-
-    // stdin read -> first pass
-    ConditionalMutex readConditional;
-    std::atomic<int> readSemaphore;
-    bool readStop = false;
+    ReadWriteSync stdinSync;
 
     processArgs(argc, argv, w, h, bits, levels);
 
@@ -56,14 +51,12 @@ int main(int argc, char *argv[]) {
     std::cerr << "Chunk Size: " << chunkSize << std::endl;
 
     // Set up concurrency
-    readSemaphore = levels * -1;
     std::thread pass1Thread(window_1d, bufferPass1, nullptr, bufferSize,
                             chunkSize, w, h, levels, bits,
-                            std::ref(readStop), std::ref(readConditional),
-                            std::ref(readSemaphore));
+                            std::ref(stdinSync));
 
     readInput(bufferPass1, chunkSize, bufferSize, imageSize,
-      levels, readConditional, readSemaphore, readStop);
+      levels, stdinSync);
     pass1Thread.join();
 
     deallocateBuffer(bufferPass1);
@@ -77,18 +70,12 @@ int main(int argc, char *argv[]) {
 
 void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
                    uint64_t imageSize, uint32_t levels,
-                   ConditionalMutex &readConditional,
-                   std::atomic<int> &readSemaphore, bool &consumerStop) {
+                   ReadWriteSync &sync) {
 
   uint8_t *readBuffer = nullptr;
   uint64_t bytesReadSoFar = 0;
   while(1) {
-    // std::cerr << "[Read] Waiting to start read" << std::endl;
-    std::unique_lock<std::mutex> lock = readConditional.waitFor([&]{
-      // std::cerr << "[Read] Woken. Checking semaphore = "
-      //   << readSemaphore << std::endl;
-      return (readSemaphore < 0);
-    });
+    std::unique_lock<std::mutex> lock = sync.producerWait();
 
     if (readBuffer == nullptr)
       readBuffer = buffer;
@@ -98,7 +85,7 @@ void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
 
     // End of all images
     if (!bytesRead && bytesReadSoFar == 0) {
-      consumerStop = true;
+      sync.signalEof();
       return;
     }
 
@@ -120,9 +107,6 @@ void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
     if (readBuffer >= buffer + bufferSize)
       readBuffer = buffer;
 
-    // std::cerr << "[Read] Read. Updating semaphore." << std::endl;
-    readSemaphore += levels;
-    lock.unlock();
-    readConditional.notify_all();
+    sync.produce(std::move(lock));
   }
 }

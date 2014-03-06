@@ -1,7 +1,7 @@
 #ifndef WINDOW_1D_H_
 #define WINDOW_1D_H_
 #include <cstdint>
-#include "conditional_mutex.hpp"
+#include "read_write_sync.hpp"
 #include <atomic>
 
 // holds value and retirement index of ascending minima or descending maxima
@@ -21,9 +21,7 @@ struct win_queue_entry
 void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
                const uint32_t chunk_size, const uint32_t img_width_pix,
                const uint32_t img_height_pix, const uint32_t n_levels,
-               const uint8_t bit_width,
-               bool &stop, ConditionalMutex &readConditional,
-               std::atomic<int> &readSemaphore);
+               const uint8_t bit_width, ReadWriteSync &sync);
 // chunk size in bytes
 
 
