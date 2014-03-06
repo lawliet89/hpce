@@ -51,6 +51,7 @@ int main(int argc, char *argv[]) {
     imageSize = calculateImageSize(w, h, bits);
     bufferPass1 = allocateBuffer(bufferSize);
 
+    std::cerr << "Image Size: " << imageSize << std::endl;
     std::cerr << "Pass Buffer Size: " << bufferSize << std::endl;
     std::cerr << "Chunk Size: " << chunkSize << std::endl;
 
@@ -112,9 +113,10 @@ void readInput(uint8_t *buffer, uint32_t chunkSize, uint64_t bufferSize,
     bytesReadSoFar += chunkSize;
     readBuffer += chunkSize;
 
-    assert(bytesReadSoFar <= imageSize);
-    if (bytesReadSoFar == imageSize)
+    if (bytesReadSoFar >= imageSize) {
       bytesReadSoFar = 0;
+      std::cerr << "[Read] Image Boundary" << std::endl;
+    }
     if (readBuffer >= buffer + bufferSize)
       readBuffer = buffer;
 

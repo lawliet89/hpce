@@ -10,7 +10,7 @@ if [[ $# -gt 0 ]]; then
 	width=$1;
 fi
 if [[ $# -gt 1 ]]; then
-	height=$1;
+	height=$2;
 fi
 if [[ $# -gt 2 ]]; then
 	bits=$3;
