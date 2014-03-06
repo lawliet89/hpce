@@ -7,12 +7,19 @@
 
 class ReadWriteSync {
   bool debug = false;
+
   const int quanta = 1;
   std::mutex m;
   std::condition_variable cv;
   std::atomic<int> semaphore;
+
   bool _eof = false;
+
   std::string name;
+
+  std::mutex resetMutex;
+  std::condition_variable resetCv;
+  bool reset = false;
 
 public:
   ReadWriteSync() : semaphore(quanta * -1), name("") {
@@ -36,17 +43,7 @@ public:
 
   bool eof();
 
-private:
-
-  std::unique_lock<std::mutex> waitFor(std::function<bool()> callable);
-
-  void lockAndUpdate(std::function<void()> callable);
-
-  void lockUpdateAndNotify(std::function<void()> callable);
-
-  void updateUnlockAndNotify(
-    std::unique_lock<std::mutex> &&lk, std::function<void()> callable);
-
-  bool tryLockUpdateAndNotify(std::function<void()> callable);
+  void waitForReset();
+  void signalReset();
 };
 #endif
