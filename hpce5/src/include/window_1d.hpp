@@ -14,6 +14,14 @@ struct win_queue_entry
   uint32_t retire_idx;
 };
 
+struct window_state
+{
+  uint32_t window_size;
+  win_queue_entry *start;
+  win_queue_entry *q_head;
+  win_queue_entry *q_tail;
+};
+
 
 // scans 
 
