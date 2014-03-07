@@ -1,5 +1,6 @@
 #include "include/window_1d.hpp"
 #include <algorithm>
+#include <unistd.h>
 
 
 //TODO fri:
@@ -79,7 +80,10 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
       acc0 += (acc0 < in_buf ? buf_size : 0);
       // fprintf(stderr, "<<<< [%d] thing 2n above: %x\n", ws->window_size,
       // *(acc0));
-      fprintf(stderr, "OUT: %2x\n", std::min(*acc0, curr_val));
+
+      uint8_t temp = std::min(*acc0, curr_val);
+      //fprintf(stderr, "OUT: %2x\n", std::min(*acc0, curr_val));
+      write(STDOUT_FILENO, 1, &temp);
     }
     // TODO
 
@@ -166,7 +170,8 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
           uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
           acc0 += (acc0 < in_buf ? buf_size : 0);
 
-          fprintf(stderr, "OUT FIRSTDRAIN: %2x\n", *acc0);  // TODO: output here
+          //fprintf(stderr, "OUT FIRSTDRAIN: %2x\n", *acc0);  // TODO: output here
+            write(STDOUT_FILENO, 1, acc0);
         }
         curr_chunk = (curr_chunk + chunk_size == in_buf + buf_size)
                          ? in_buf
@@ -179,7 +184,8 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
             uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
             acc0 += (acc0 < in_buf ? buf_size : 0);
 
-            fprintf(stderr, "OUT: %2x\n", *acc0);  // TODO: output here
+            //fprintf(stderr, "OUT: %2x\n", *acc0);  // TODO: output here
+            write(STDOUT_FILENO, 1, acc0);
           }
           curr_chunk = (curr_chunk + chunk_size == in_buf + buf_size)
                            ? in_buf
