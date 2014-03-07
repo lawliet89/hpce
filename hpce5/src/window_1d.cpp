@@ -1,6 +1,15 @@
 #include "include/window_1d.hpp"
 #include <algorithm>
 
+
+//TODO fri:
+
+// output func [&] or inline directly, per-pixel, advances chunk ptr as required (only forward in chunk sizes)
+
+// make inner loop operate on individual pixels?
+// should be fixable +- okish for multibyte
+// reading accums and such will still need repacking individual pixels...
+
 // does 1d rolling window min/max over the given chunks of rows and accumulates
 // results vertically
 void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
@@ -137,7 +146,6 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
           uint8_t* acc2 = curr_chunk + j + ii -
                           (2 * n_levels - n_depth) * img_w_bytes - n_depth;
           acc2 += (acc2 < in_buf ? buf_size : 0);
-          // TODO: think whether +ii could wrap the other way... surely not
 
           *acc1 = std::min(*acc1, (uint8_t)ws->q_head->value);
           *acc2 = std::min(*acc2, (uint8_t)ws->q_head->value);
