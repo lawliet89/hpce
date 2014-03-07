@@ -1,6 +1,7 @@
 process
 *.o
 v1
+v2
 *.dat
 temp/*
 *.swp

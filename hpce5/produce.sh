@@ -6,16 +6,16 @@ height=$((2<<12))
 bits=8
 copies=1
 
-if [[ $# -gt 1 ]]; then
+if [[ $# -gt 0 ]]; then
 	width=$1;
 fi
-if [[ $# -gt 2 ]]; then
-	height=$1;
+if [[ $# -gt 1 ]]; then
+	height=$2;
 fi
-if [[ $# -gt 3 ]]; then
+if [[ $# -gt 2 ]]; then
 	bits=$3;
 fi
-if [[ $# -gt 4 ]]; then
+if [[ $# -gt 3 ]]; then
 	copies=$4;
 fi
 

@@ -1,8 +1,9 @@
 #include "include/housekeeping.hpp"
 #include <cstring>
+#include <unistd.h>
 
 void processArgs(int argc, char *argv[], uint32_t &w, uint32_t &h,
-                 uint32_t &bits, uint32_t &levels) {
+                 uint32_t &bits, uint32_t &levels, Operation &firstOp) {
   if (argc < 3) {
     fprintf(stderr, "Usage: process width height [bits] [levels]\n");
     fprintf(stderr, "   bits=8 by default\n");
@@ -32,10 +33,21 @@ void processArgs(int argc, char *argv[], uint32_t &w, uint32_t &h,
   }
 
   levels = 1;
+  int levelsRaw = levels;
+  // TODO: Handle negative i.e. direction
   if (argc > 4) {
-    levels = atoi(argv[4]);
+    levelsRaw = atoi(argv[4]);
+    levels = abs(levelsRaw);
   }
 
+  if (levelsRaw < 0) {
+    firstOp = Operation::ERODE;
+    std::cerr << "Erode --> Dilate" << std::endl;
+  }
+  else if (levelsRaw > 0){
+    firstOp = Operation::DILATE;
+    std::cerr << "Dilate --> Erode" << std::endl;
+  }
   if (abs(levels) > std::min(std::min(w / 4u, h / 4u), 64u)) {
     throw std::invalid_argument(
         "0 <= abs(levels) <= min(width/4, height/4, 64)");
@@ -83,10 +95,28 @@ uint32_t calculateChunkSize(uint32_t w, uint32_t h, uint32_t bits,
 }
 
 uint8_t *allocateBuffer(uint64_t size, bool maximise) {
-  uint8_t *ptr = new uint8_t[size]();
+  uint8_t *buffer = new uint8_t[size]();
   if (maximise)
-    memset(ptr, 0xff, size);
-  return ptr;
+    oneiseBuffer(buffer, size);
+  return buffer;
+}
+
+void zeroiseBuffer(uint8_t *buffer, uint64_t size) {
+  memset(buffer, 0x00, size);
+}
+void oneiseBuffer(uint8_t *buffer, uint64_t size) {
+  memset(buffer, 0xff, size);
 }
 
 void deallocateBuffer(uint8_t *buffer) { delete[] buffer; }
+
+void trivialPassthrough() {
+  uint8_t *buffer = new uint8_t[4096];
+  uint64_t bytesRead;
+  while (1) {
+    bytesRead = read(STDIN_FILENO, buffer, 4096);
+    if (!bytesRead)
+      return;
+    write(STDOUT_FILENO, buffer, bytesRead);
+  }
+}
