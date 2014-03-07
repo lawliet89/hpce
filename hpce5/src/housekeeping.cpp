@@ -40,8 +40,10 @@ void processArgs(int argc, char *argv[], uint32_t &w, uint32_t &h,
     levels = abs(levelsRaw);
   }
 
-  if (levelsRaw < 0) firstOp = Operation::DILATE;
-  else if (levelsRaw > 0) firstOp = Operation::ERODE;
+  if (levelsRaw < 0)
+    firstOp = Operation::DILATE;
+  else if (levelsRaw > 0)
+    firstOp = Operation::ERODE;
 
   if (abs(levels) > std::min(std::min(w / 4u, h / 4u), 64u)) {
     throw std::invalid_argument(
@@ -108,9 +110,10 @@ void deallocateBuffer(uint8_t *buffer) { delete[] buffer; }
 void trivialPassthrough() {
   uint8_t *buffer = new uint8_t[4096];
   uint64_t bytesRead;
-  while(1) {
+  while (1) {
     bytesRead = read(STDIN_FILENO, buffer, 4096);
-    if (!bytesRead) return;
+    if (!bytesRead)
+      return;
     write(STDOUT_FILENO, buffer, bytesRead);
   }
 }

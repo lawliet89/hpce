@@ -22,7 +22,7 @@ class ReadWriteSync {
 
 public:
   ReadWriteSync() : semaphore(quanta * -1), name("") {
-    if (getenv("HPCE_DEBUG") && strcmp(getenv("HPCE_DEBUG"), "true")){
+    if (getenv("HPCE_DEBUG") && strcmp(getenv("HPCE_DEBUG"), "true")) {
       debug = true;
     }
   }

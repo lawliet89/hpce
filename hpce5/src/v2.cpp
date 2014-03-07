@@ -6,12 +6,14 @@
 #include <thread>
 #include <atomic>
 
-void readInput(uint8_t* const buffer, const uint32_t chunkSize, const uint64_t bufferSize,
-               const uint64_t imageSize, ReadWriteSync &sync, uint8_t* const intermediateBuffer,
+void readInput(uint8_t *const buffer, const uint32_t chunkSize,
+               const uint64_t bufferSize, const uint64_t imageSize,
+               ReadWriteSync &sync, uint8_t *const intermediateBuffer,
                const Operation firstOp);
 
-void writeOutput(uint8_t* const buffer, const uint32_t chunkSize, const uint64_t bufferSize,
-                 const uint64_t imageSize, ReadWriteSync &sync);
+void writeOutput(uint8_t *const buffer, const uint32_t chunkSize,
+                 const uint64_t bufferSize, const uint64_t imageSize,
+                 ReadWriteSync &sync);
 
 int main(int argc, char *argv[]) {
   try {
@@ -62,17 +64,17 @@ int main(int argc, char *argv[]) {
     std::cerr << "Chunk Size: " << chunkSize << std::endl;
 
     // Set up concurrency
-    std::thread pass1Thread(window_1d, stdinBuffer, intermediateBuffer, bufferSize,
-                            chunkSize, w, h, levels, bits,
+    std::thread pass1Thread(window_1d, stdinBuffer, intermediateBuffer,
+                            bufferSize, chunkSize, w, h, levels, bits,
                             std::ref(stdinSync), std::ref(passSync));
-    std::thread pass2Thread(window_1d, intermediateBuffer, stdoutBuffer, bufferSize,
-                            chunkSize, w, h, levels, bits,
+    std::thread pass2Thread(window_1d, intermediateBuffer, stdoutBuffer,
+                            bufferSize, chunkSize, w, h, levels, bits,
                             std::ref(passSync), std::ref(stdoutSync));
     std::thread writeThread(writeOutput, stdoutBuffer, chunkSize, bufferSize,
                             imageSize, std::ref(stdoutSync));
 
     readInput(stdinBuffer, chunkSize, bufferSize, imageSize, stdinSync,
-             intermediateBuffer, firstOp);
+              intermediateBuffer, firstOp);
 
     pass1Thread.join();
     pass2Thread.join();
@@ -89,16 +91,18 @@ int main(int argc, char *argv[]) {
   }
 }
 
-void readInput(uint8_t* const buffer, const uint32_t chunkSize, const uint64_t bufferSize,
-               const uint64_t imageSize, ReadWriteSync &sync, uint8_t* const intermediateBuffer,
+void readInput(uint8_t *const buffer, const uint32_t chunkSize,
+               const uint64_t bufferSize, const uint64_t imageSize,
+               ReadWriteSync &sync, uint8_t *const intermediateBuffer,
                const Operation firstOp) {
 
   uint8_t *readBuffer = buffer;
   uint64_t bytesReadSoFar = 0;
-  while(1) {
+  while (1) {
     std::unique_lock<std::mutex> lock = sync.producerWait();
 
-    uint64_t bytesToRead = std::min(uint64_t(chunkSize), imageSize - bytesReadSoFar);
+    uint64_t bytesToRead =
+        std::min(uint64_t(chunkSize), imageSize - bytesReadSoFar);
     uint64_t bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
 
     // End of all images
@@ -110,8 +114,8 @@ void readInput(uint8_t* const buffer, const uint32_t chunkSize, const uint64_t b
     while (bytesRead < bytesToRead) {
       std::cerr << "Warning: Chunk was not read in its entirety " << bytesRead
                 << "/" << bytesToRead << "-- retrying" << std::endl;
-      bytesRead += read(STDIN_FILENO, readBuffer + bytesRead,
-        bytesToRead - bytesRead);
+      bytesRead +=
+          read(STDIN_FILENO, readBuffer + bytesRead, bytesToRead - bytesRead);
     }
 
     // Always go by chunkSize
@@ -145,13 +149,14 @@ void readInput(uint8_t* const buffer, const uint32_t chunkSize, const uint64_t b
   }
 }
 
-void writeOutput(uint8_t* const buffer, const uint32_t chunkSize, const uint64_t bufferSize,
-                 const uint64_t imageSize, ReadWriteSync &sync){
+void writeOutput(uint8_t *const buffer, const uint32_t chunkSize,
+                 const uint64_t bufferSize, const uint64_t imageSize,
+                 ReadWriteSync &sync) {
 
   uint8_t *current = buffer;
   uint64_t bytesSoFar = 0u;
 
-  while(1) {
+  while (1) {
     sync.consumerWait();
     if (sync.eof()) {
       return;
