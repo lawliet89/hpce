@@ -55,8 +55,9 @@ int main(int argc, char *argv[]) {
     bufferSize += chunkSize;
     imageSize = calculateImageSize(w, h, bits);
 
-    stdinBuffer = allocateBuffer(bufferSize);
-    intermediateBuffer = allocateBuffer(bufferSize);
+    stdinBuffer = allocateBuffer(bufferSize, firstOp == Operation::ERODE);
+    intermediateBuffer =
+        allocateBuffer(bufferSize, firstOp == Operation::DILATE);
     stdoutBuffer = allocateBuffer(bufferSize);
 
     std::cerr << "Image Size: " << imageSize << std::endl;

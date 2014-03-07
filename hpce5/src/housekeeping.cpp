@@ -41,9 +41,9 @@ void processArgs(int argc, char *argv[], uint32_t &w, uint32_t &h,
   }
 
   if (levelsRaw < 0)
-    firstOp = Operation::DILATE;
-  else if (levelsRaw > 0)
     firstOp = Operation::ERODE;
+  else if (levelsRaw > 0)
+    firstOp = Operation::DILATE;
 
   if (abs(levels) > std::min(std::min(w / 4u, h / 4u), 64u)) {
     throw std::invalid_argument(
