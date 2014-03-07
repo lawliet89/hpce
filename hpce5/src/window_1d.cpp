@@ -127,9 +127,9 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
         if (out_subchunk_cnt++ == chunk_size - 1) {
           // TODO: SYNC: .produce() followed by .wait
           // TODO: sync for the starting chunk here
-          write(STDOUT_FILENO, curr_out_chunk, chunk_size);
-          // consumer.produce(std::move(lock));
-          // lock = consumer.producerWait();
+          // write(STDOUT_FILENO, curr_out_chunk, chunk_size);
+          consumer.produce(std::move(lock));
+          lock = consumer.producerWait();
           curr_out_chunk += chunk_size;
           curr_out_chunk -= (curr_out_chunk >= out_buf + buf_size) ? buf_size : 0;
 
@@ -218,9 +218,9 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
             if (out_subchunk_cnt++ == chunk_size - 1) {
               // TODO: SYNC: .produce() followed by .wait
               // TODO: sync for the starting chunk here
-              // consumer.produce(std::move(lock));
-              // lock = consumer.producerWait();
-              write(STDOUT_FILENO, curr_out_chunk, chunk_size);
+              consumer.produce(std::move(lock));
+              lock = consumer.producerWait();
+              // write(STDOUT_FILENO, curr_out_chunk, chunk_size);
 
               curr_out_chunk += chunk_size;
               curr_out_chunk -=
@@ -247,9 +247,9 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
               if (out_subchunk_cnt++ == chunk_size - 1) {
                 // TODO: SYNC: .produce() followed by .wait
                 // TODO: sync for the starting chunk here
-                // consumer.produce(std::move(lock));
-                // lock = consumer.producerWait();
-                write(STDOUT_FILENO, curr_out_chunk, chunk_size);
+                consumer.produce(std::move(lock));
+                lock = consumer.producerWait();
+                // write(STDOUT_FILENO, curr_out_chunk, chunk_size);
 
                 curr_out_chunk += chunk_size;
                 curr_out_chunk -=
@@ -267,6 +267,10 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
 
           // TODO
           // fprintf(stderr, "\nDONE!\n");
+          std::unique_lock<std::mutex> resetLock = consumer.waitForReset();
+
+          // reset
+          consumer.resetDone(std::move(resetLock));
           producer.signalReset();
           // return;
         }

@@ -64,21 +64,21 @@ int main(int argc, char *argv[]) {
     std::cerr << "Chunk Size: " << chunkSize << std::endl;
 
     // Set up concurrency
-    std::thread pass1Thread(window_1d, stdinBuffer, stdoutBuffer,
-                            bufferSize, chunkSize, w, h, levels, bits,
-                            std::ref(stdinSync), std::ref(stdoutSync));
+    std::thread pass1Thread(window_1d, stdinBuffer, stdoutBuffer, bufferSize,
+                            chunkSize, w, h, levels, bits, std::ref(stdinSync),
+                            std::ref(stdoutSync));
     // std::thread pass2Thread(window_1d, intermediateBuffer, stdoutBuffer,
     //                         bufferSize, chunkSize, w, h, levels, bits,
     //                         std::ref(passSync), std::ref(stdoutSync));
-    // std::thread writeThread(writeOutput, stdoutBuffer, chunkSize, bufferSize,
-    //                         imageSize, std::ref(stdoutSync));
+    std::thread writeThread(writeOutput, stdoutBuffer, chunkSize, bufferSize,
+                            imageSize, std::ref(stdoutSync));
 
     readInput(stdinBuffer, chunkSize, bufferSize, imageSize, stdinSync,
               intermediateBuffer, firstOp);
 
     pass1Thread.join();
     // pass2Thread.join();
-    // writeThread.join();
+    writeThread.join();
 
     deallocateBuffer(stdinBuffer);
     deallocateBuffer(intermediateBuffer);
