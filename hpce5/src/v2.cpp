@@ -59,17 +59,20 @@ int main(int argc, char *argv[]) {
         allocateBuffer(bufferSize, firstOp == Operation::DILATE);
     stdoutBuffer = allocateBuffer(bufferSize);
 
+    auto pass1 = firstOp == Operation::ERODE ? window_1d_min : window_1d_max;
+    auto pass2 = firstOp == Operation::ERODE ? window_1d_max : window_1d_min;
+
     std::cerr << "Image Size: " << imageSize << std::endl;
     std::cerr << "Pass Buffer Size: " << bufferSize << std::endl;
     std::cerr << "Chunk Size: " << chunkSize << std::endl;
 
     // Set up concurrency
-    std::thread pass1Thread(window_1d_max, stdinBuffer, stdoutBuffer, bufferSize,
+    std::thread pass1Thread(pass1, stdinBuffer, intermediateBuffer, bufferSize,
                             chunkSize, w, h, levels, bits, std::ref(stdinSync),
+                            std::ref(passSync));
+    std::thread pass2Thread(pass2, intermediateBuffer, stdoutBuffer, bufferSize,
+                            chunkSize, w, h, levels, bits, std::ref(passSync),
                             std::ref(stdoutSync));
-    // std::thread pass2Thread(window_1d, intermediateBuffer, stdoutBuffer,
-    //                         bufferSize, chunkSize, w, h, levels, bits,
-    //                         std::ref(passSync), std::ref(stdoutSync));
     std::thread writeThread(writeOutput, stdoutBuffer, chunkSize, bufferSize,
                             imageSize, std::ref(stdoutSync));
 
@@ -77,7 +80,7 @@ int main(int argc, char *argv[]) {
               intermediateBuffer, firstOp);
 
     pass1Thread.join();
-    // pass2Thread.join();
+    pass2Thread.join();
     writeThread.join();
 
     deallocateBuffer(stdinBuffer);
