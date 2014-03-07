@@ -266,8 +266,9 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
           }
 
           // TODO
-          fprintf(stderr, "\nDONE!\n");
-          return;
+          // fprintf(stderr, "\nDONE!\n");
+          producer.signalReset();
+          // return;
         }
       }
     }
