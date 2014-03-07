@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "Chunk Size: " << chunkSize << std::endl;
 
     // Set up concurrency
-    std::thread pass1Thread(window_1d, stdinBuffer, stdoutBuffer, bufferSize,
+    std::thread pass1Thread(window_1d_max, stdinBuffer, stdoutBuffer, bufferSize,
                             chunkSize, w, h, levels, bits, std::ref(stdinSync),
                             std::ref(stdoutSync));
     // std::thread pass2Thread(window_1d, intermediateBuffer, stdoutBuffer,
