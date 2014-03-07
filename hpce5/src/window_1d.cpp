@@ -148,7 +148,8 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
         uint32_t n_depth = (ws->window_size - 1) / 2;
         if (ws->q_head->retire_idx == i) {
           ws->q_head++;
-          if (ws->q_head >= end) ws->q_head = ws->start;
+          if (ws->q_head >= end)
+            ws->q_head = ws->start;
         }
         if (curr_val <= ws->q_head->value) {
           ws->q_head->value = curr_val;
@@ -156,11 +157,13 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
           ws->q_tail = ws->q_head;
         } else {
           while (ws->q_tail->value >= curr_val) {
-            if (ws->q_tail == ws->start) ws->q_tail = end;
+            if (ws->q_tail == ws->start)
+              ws->q_tail = end;
             --(ws->q_tail);
           }
           ++(ws->q_tail);
-          if (ws->q_tail == end) ws->q_tail = ws->start;
+          if (ws->q_tail == end)
+            ws->q_tail = ws->start;
 
           ws->q_tail->value = curr_val;
           ws->q_tail->retire_idx = i + ws->window_size;
@@ -181,7 +184,8 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
           for (uint32_t ii = 1; ii <= n_depth; ++ii) {
             if (ws->q_head->retire_idx == i + ii) {
               ws->q_head++;
-              if (ws->q_head >= end) ws->q_head = ws->start;
+              if (ws->q_head >= end)
+                ws->q_head = ws->start;
             }
             uint8_t* acc1 =
                 curr_chunk + j + ii - n_depth * img_w_bytes - n_depth;
@@ -402,19 +406,22 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
         uint32_t n_depth = (ws->window_size - 1) / 2;
         if (ws->q_head->retire_idx == i) {
           ws->q_head++;
-          if (ws->q_head >= end) ws->q_head = ws->start;
+          if (ws->q_head >= end)
+            ws->q_head = ws->start;
         }
-        if (curr_val >= ws->q_head->value) {  //CHANGED
+        if (curr_val >= ws->q_head->value) {  // CHANGED
           ws->q_head->value = curr_val;
           ws->q_head->retire_idx = i + ws->window_size;
           ws->q_tail = ws->q_head;
         } else {
-          while (ws->q_tail->value <= curr_val) { //CHANGED
-            if (ws->q_tail == ws->start) ws->q_tail = end;
+          while (ws->q_tail->value <= curr_val) {  // CHANGED
+            if (ws->q_tail == ws->start)
+              ws->q_tail = end;
             --(ws->q_tail);
           }
           ++(ws->q_tail);
-          if (ws->q_tail == end) ws->q_tail = ws->start;
+          if (ws->q_tail == end)
+            ws->q_tail = ws->start;
 
           ws->q_tail->value = curr_val;
           ws->q_tail->retire_idx = i + ws->window_size;
@@ -427,15 +434,16 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
         acc2 += (acc2 < in_buf ? buf_size : 0);
 
         if (i >= n_depth) {
-          *acc1 = std::max(*acc1, (uint8_t)ws->q_head->value);//CHANGED
-          *acc2 = std::max(*acc2, (uint8_t)ws->q_head->value);//CHANGED
+          *acc1 = std::max(*acc1, (uint8_t)ws->q_head->value);  // CHANGED
+          *acc2 = std::max(*acc2, (uint8_t)ws->q_head->value);  // CHANGED
         }
         // special drain
         if (i == img_w_bytes - 1) {
           for (uint32_t ii = 1; ii <= n_depth; ++ii) {
             if (ws->q_head->retire_idx == i + ii) {
               ws->q_head++;
-              if (ws->q_head >= end) ws->q_head = ws->start;
+              if (ws->q_head >= end)
+                ws->q_head = ws->start;
             }
             uint8_t* acc1 =
                 curr_chunk + j + ii - n_depth * img_w_bytes - n_depth;
@@ -444,8 +452,8 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
                             (2 * n_levels - n_depth) * img_w_bytes - n_depth;
             acc2 += (acc2 < in_buf ? buf_size : 0);
 
-            *acc1 = std::max(*acc1, (uint8_t)ws->q_head->value); //CHANGED
-            *acc2 = std::max(*acc2, (uint8_t)ws->q_head->value); //CHANGED
+            *acc1 = std::max(*acc1, (uint8_t)ws->q_head->value);  // CHANGED
+            *acc2 = std::max(*acc2, (uint8_t)ws->q_head->value);  // CHANGED
           }
           ws->q_tail = ws->q_head;
           ws->q_head->value = 0;  // TODO: max different//CHANGED
