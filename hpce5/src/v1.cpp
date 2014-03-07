@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     bufferSize = calculateBufferSize(w, h, bits, levels);
     chunkSize = calculateChunkSize(w, h, bits, levels, bufferSize);
     imageSize = calculateImageSize(w, h, bits);
-    bufferPass1 = allocateBuffer(bufferSize);
+    bufferPass1 = allocateBuffer(bufferSize, true);
 
     std::cerr << "Pass Buffer Size: " << bufferSize << std::endl;
     std::cerr << "Chunk Size: " << chunkSize << std::endl;

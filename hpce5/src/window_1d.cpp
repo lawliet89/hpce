@@ -83,7 +83,7 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
 
       uint8_t temp = std::min(*acc0, curr_val);
       //fprintf(stderr, "OUT: %2x\n", std::min(*acc0, curr_val));
-      write(STDOUT_FILENO, 1, &temp);
+            write(STDOUT_FILENO, &temp,1 );
     }
     // TODO
 
@@ -171,7 +171,7 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
           acc0 += (acc0 < in_buf ? buf_size : 0);
 
           //fprintf(stderr, "OUT FIRSTDRAIN: %2x\n", *acc0);  // TODO: output here
-            write(STDOUT_FILENO, 1, acc0);
+            write(STDOUT_FILENO, acc0, 1);
         }
         curr_chunk = (curr_chunk + chunk_size == in_buf + buf_size)
                          ? in_buf
@@ -185,7 +185,7 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
             acc0 += (acc0 < in_buf ? buf_size : 0);
 
             //fprintf(stderr, "OUT: %2x\n", *acc0);  // TODO: output here
-            write(STDOUT_FILENO, 1, acc0);
+            write(STDOUT_FILENO, acc0, 1);
           }
           curr_chunk = (curr_chunk + chunk_size == in_buf + buf_size)
                            ? in_buf
