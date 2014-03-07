@@ -24,6 +24,7 @@ int main(int argc, char *argv[]) {
     chunkSize = calculateChunkSize(w, h, bits, levels, bufferSize);
     imageSize = calculateImageSize(w, h, bits);
     bufferPass1 = allocateBuffer(bufferSize, true);
+    uint8_t* buf2 = allocateBuffer(bufferSize, true);
 
     std::cerr << "Pass Buffer Size: " << bufferSize << std::endl;
     std::cerr << "Chunk Size: " << chunkSize << std::endl;
@@ -31,7 +32,7 @@ int main(int argc, char *argv[]) {
     uint64_t chunkRead;
     while ((chunkRead =
                 readInput(bufferPass1, chunkSize, bufferSize, imageSize))) {
-      window_1d(bufferPass1, nullptr, bufferSize, chunkSize, w, h, levels, bits);
+      window_1d(bufferPass1, buf2, bufferSize, chunkSize, w, h, levels, bits);
     }
 
     deallocateBuffer(bufferPass1);

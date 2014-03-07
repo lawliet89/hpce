@@ -3,27 +3,6 @@
 
 #include <cstdint>
 
-//TODO
-#include <stdio.h>
-
-// holds value and retirement index of ascending minima or descending maxima
-// TODO: push into anonymous scope
-struct win_queue_entry
-{
-  uint32_t value;
-  uint32_t retire_idx;
-};
-
-struct window_state
-{
-  uint32_t window_size;
-  win_queue_entry *start;
-  win_queue_entry *q_head;
-  win_queue_entry *q_tail;
-};
-
-
-// scans 
 
 //TODO: out_buf
 //TODO: remove bitwidth via specialisation
@@ -32,17 +11,5 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
                const uint32_t chunk_size, const uint32_t img_width_pix,
                const uint32_t img_height, const uint32_t n_levels,
                const uint8_t bit_width);
-// chunk size in bytes
-
-
-// 1 window, 1 byte only, horizontal, chunked
-
-// n windows, 1 byte only, horiz
-
-// n windows diamond, 1 byte only
-
-// all bitness
-
-// compile-time generation of unpacked funcs
 
 #endif
