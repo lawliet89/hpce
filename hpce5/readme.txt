@@ -4,7 +4,14 @@ Ryan Savitski and Yong Wen Chua
 Algorithms Overview
 
 The application is designed as a system of independent modules that would work
-well on their own as separate threads.
+well on their own as separate threads. These disparate threads can then be
+strung together to form a multi-threaded application through the use of buffers
+and synchronisation primitives.
+
+Performing a n levels erosion or dilation can be thought of as a minimisation
+or maximisation of the n Manhattan Distance Von Neumann neighbourhood of some
+pixel. Since minimisation and maximisation are both associative, and
+commutative, it does not matter which order
 ===============================================================================
 Verification Methodology
 ===============================================================================
