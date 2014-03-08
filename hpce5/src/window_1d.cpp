@@ -49,8 +49,9 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
   window_state* wss;
   window_state* ws;
 
-  // TODO: why?
-  std::unique_lock<std::mutex> lock = consumer.producerWait();
+  std::unique_lock<std::mutex> lock;
+
+  std::unique_lock<std::mutex> resetLock = consumer.waitForReset();
 
   // initialise counters and compute chunk padding for extra N rows
   i = 0;
@@ -101,6 +102,12 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
       out_subchunk_cnt = 0;
     }
   };
+
+  // reset
+  consumer.resetDone(std::move(resetLock));
+  producer.signalReset();
+
+  lock = consumer.producerWait();
 
   // main thread loop
   while (1) {
@@ -222,7 +229,7 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
 
           // TODO
           // synchronise reset
-          std::unique_lock<std::mutex> resetLock = consumer.waitForReset();
+          resetLock = consumer.waitForReset();
 
           // reset
           consumer.resetDone(std::move(resetLock));
@@ -266,10 +273,12 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
   window_state* wss;
   window_state* ws;
 
+  std::unique_lock<std::mutex> lock;
+
   // TODO: threaded -> done once anyway
   bool serial_hack = 0;
 
-  std::unique_lock<std::mutex> lock = consumer.producerWait();
+  std::unique_lock<std::mutex> resetLock = consumer.waitForReset();
 
   if (!serial_hack) {
     //////////////////////////
@@ -305,6 +314,11 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
     //////////////////////////
     serial_hack = 1;
   }
+
+  // reset
+  consumer.resetDone(std::move(resetLock));
+  producer.signalReset();
+  lock = consumer.producerWait();
 
   while (1) {
     producer.consumerWait();
@@ -480,7 +494,7 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
 
           // TODO
           // fprintf(stderr, "\nDONE!\n");
-          std::unique_lock<std::mutex> resetLock = consumer.waitForReset();
+          resetLock = consumer.waitForReset();
 
           // reset
           consumer.resetDone(std::move(resetLock));

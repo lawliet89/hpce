@@ -101,6 +101,12 @@ void readInput(uint8_t *const buffer, const uint32_t chunkSize,
 
   uint8_t *readBuffer = buffer;
   uint64_t bytesReadSoFar = 0;
+
+  std::cerr << "[Read] Waiting to be ready..." << std::endl;
+  std::unique_lock<std::mutex> resetLock = sync.waitForReset();
+  std::cerr << "[Read] Ready" << std::endl;
+  sync.resetDone(std::move(resetLock));
+
   while (1) {
     std::unique_lock<std::mutex> lock = sync.producerWait();
 
@@ -132,7 +138,7 @@ void readInput(uint8_t *const buffer, const uint32_t chunkSize,
 
     if (bytesReadSoFar >= imageSize) {
       std::cerr << "[Read] Image Boundary. Waitng for reset..." << std::endl;
-      std::unique_lock<std::mutex> resetLock = sync.waitForReset();
+      resetLock = sync.waitForReset();
 
       // Perform resets
       bytesReadSoFar = 0;
@@ -158,6 +164,9 @@ void writeOutput(uint8_t *const buffer, const uint32_t chunkSize,
 
   uint8_t *current = buffer;
   uint64_t bytesSoFar = 0u;
+
+  std::cerr << "[Write] Ready" << std::endl;
+  sync.signalReset();
 
   while (1) {
     sync.consumerWait();
