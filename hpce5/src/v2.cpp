@@ -115,7 +115,7 @@ void readInput(uint8_t *const buffer, const uint32_t chunkSize,
     uint64_t bytesRead = read(STDIN_FILENO, readBuffer, bytesToRead);
 
     // End of all images
-    if (!bytesRead && bytesReadSoFar == 0) {
+    if (bytesRead == 0 && bytesReadSoFar == 0) {
       sync.signalEof();
       return;
     }

@@ -227,8 +227,10 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
               output_synced(*acc0);
               acc0 = (acc0 + 1 == in_buf + buf_size) ? in_buf : acc0 + 1;
             }
-            if (out_subchunk_cnt != 0)
+            if (out_subchunk_cnt != 0) {
               consumer.produce(std::move(lock));
+              lock = consumer.producerWait();
+            }
 
             // while (++j < chunk_size) {
             //   uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
@@ -272,7 +274,7 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
   }
   catch (std::exception& e)
   {
-    std::cerr << "Caught exception : " << e.what() << "\n";
+    std::cerr << "[Min] Caught exception : " << e.what() << "\n";
     return;
   }
 }
@@ -488,8 +490,10 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
               }
               acc0 = (acc0 + 1 == in_buf + buf_size) ? in_buf : acc0 + 1;
             }
-            if (out_subchunk_cnt != 0)
+            if (out_subchunk_cnt != 0) {
               consumer.produce(std::move(lock));
+              lock = consumer.producerWait();
+            }
 
             // // finish current chunk
             // while (++j < chunk_size) {
@@ -561,6 +565,7 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
             // reset
             consumer.resetDone(std::move(resetLock));
             producer.signalReset();
+
             // return;
           }
         }
@@ -576,7 +581,7 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
   }
   catch (std::exception& e)
   {
-    std::cerr << "Caught exception : " << e.what() << "\n";
+    std::cerr << "[Max] Caught exception : " << e.what() << "\n";
     return;
   }
 }
