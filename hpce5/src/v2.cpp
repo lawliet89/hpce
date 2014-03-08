@@ -15,8 +15,10 @@ void writeOutput(uint8_t *const buffer, const uint32_t chunkSize,
                  const uint64_t bufferSize, const uint64_t imageSize,
                  ReadWriteSync &sync);
 
-int main(int argc, char *argv[]) {
-  try {
+int main(int argc, char *argv[])
+{
+  try
+  {
     /*
       Global Parameters
     */
@@ -59,8 +61,15 @@ int main(int argc, char *argv[]) {
         allocateBuffer(bufferSize, firstOp == Operation::DILATE);
     stdoutBuffer = allocateBuffer(bufferSize);
 
-    auto pass1 = firstOp == Operation::ERODE ? window_1d_min : window_1d_max;
-    auto pass2 = firstOp == Operation::ERODE ? window_1d_max : window_1d_min;
+    //    auto pass1 = firstOp == Operation::ERODE ? window_1d_min :
+    // window_1d_max;
+    //    auto pass2 = firstOp == Operation::ERODE ? window_1d_max :
+    // window_1d_min;
+
+    auto pass1 =
+        firstOp == Operation::ERODE ? window_1d<MIN_PASS> : window_1d<MAX_PASS>;
+    auto pass2 =
+        firstOp == Operation::ERODE ? window_1d<MAX_PASS> : window_1d<MIN_PASS>;
 
     std::cerr << "Image Size: " << imageSize << std::endl;
     std::cerr << "Pass Buffer Size: " << bufferSize << std::endl;
@@ -88,7 +97,8 @@ int main(int argc, char *argv[]) {
     deallocateBuffer(stdoutBuffer);
     return 0;
   }
-  catch (std::exception &e) {
+  catch (std::exception &e)
+  {
     std::cerr << "Caught exception : " << e.what() << "\n";
     return 1;
   }
@@ -97,7 +107,8 @@ int main(int argc, char *argv[]) {
 void readInput(uint8_t *const buffer, const uint32_t chunkSize,
                const uint64_t bufferSize, const uint64_t imageSize,
                ReadWriteSync &sync, uint8_t *const intermediateBuffer,
-               const Operation firstOp) {
+               const Operation firstOp)
+{
 
   uint8_t *readBuffer = buffer;
   uint64_t bytesReadSoFar = 0;
@@ -160,7 +171,8 @@ void readInput(uint8_t *const buffer, const uint32_t chunkSize,
 
 void writeOutput(uint8_t *const buffer, const uint32_t chunkSize,
                  const uint64_t bufferSize, const uint64_t imageSize,
-                 ReadWriteSync &sync) {
+                 ReadWriteSync &sync)
+{
 
   uint8_t *current = buffer;
   uint64_t bytesSoFar = 0u;
