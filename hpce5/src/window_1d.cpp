@@ -265,6 +265,8 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
 
             consumer.resetDone(std::move(resetLock));
             producer.signalReset();
+
+            break;
           }
         }
       }
@@ -565,7 +567,7 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
             // reset
             consumer.resetDone(std::move(resetLock));
             producer.signalReset();
-
+            break;
             // return;
           }
         }
