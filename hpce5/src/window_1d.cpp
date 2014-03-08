@@ -82,6 +82,14 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
     ws->q_head->retire_idx = ws->window_size;
   }
 
+  // circular buffer access for chunked buffers (both in and out)
+  auto advance_chunk_ptr = [](uint8_t*& chunk_ptr, uint32_t chunk_size,
+                              uint8_t* buf_base, uint64_t buf_size) {
+    chunk_ptr = (chunk_ptr + chunk_size == buf_base + buf_size)
+                    ? buf_base
+                    : chunk_ptr + chunk_size;
+  };
+
   // main thread loop
   while (1) {
     producer.consumerWait();
@@ -109,9 +117,7 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
           consumer.produce(std::move(lock));
           lock = consumer.producerWait();
 
-          curr_out_chunk = (curr_out_chunk + chunk_size == out_buf + buf_size)
-                               ? out_buf
-                               : curr_out_chunk + chunk_size;
+          advance_chunk_ptr(curr_out_chunk, chunk_size, out_buf, buf_size);
 
           out_subchunk_cnt = 0;
         }
@@ -181,7 +187,7 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
       }
 
       // if at the start of a row, restart the windows' state
-      if (++i == img_w_bytes) {  // TODO: preincrement shouldn't break it
+      if (++i == img_w_bytes) {
         i = 0;
         if (++row_cnt == img_height) {
           // finish current chunk with accumulator drain (no window updates)
@@ -196,17 +202,13 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
               consumer.produce(std::move(lock));
               lock = consumer.producerWait();
 
-              curr_out_chunk =
-                  (curr_out_chunk + chunk_size == out_buf + buf_size)
-                      ? out_buf
-                      : curr_out_chunk + chunk_size;
+              advance_chunk_ptr(curr_out_chunk, chunk_size, out_buf, buf_size);
 
               out_subchunk_cnt = 0;
             }
           }
-          curr_chunk = (curr_chunk + chunk_size == in_buf + buf_size)
-                           ? in_buf
-                           : curr_chunk + chunk_size;
+
+          advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
 
           // flush any extra accumulators for extra N rows at the bottom of the
           // image
@@ -222,17 +224,14 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
                 consumer.produce(std::move(lock));
                 lock = consumer.producerWait();
 
-                curr_out_chunk =
-                    (curr_out_chunk + chunk_size == out_buf + buf_size)
-                        ? out_buf
-                        : curr_out_chunk + chunk_size;
+                advance_chunk_ptr(curr_out_chunk, chunk_size, out_buf,
+                                  buf_size);
 
                 out_subchunk_cnt = 0;
               }
             }
-            curr_chunk = (curr_chunk + chunk_size == in_buf + buf_size)
-                             ? in_buf
-                             : curr_chunk + chunk_size;
+
+            advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
           }
 
           // TODO
@@ -246,10 +245,8 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
         }
       }
     }
-    // done with chunk
-    curr_chunk = (curr_chunk + chunk_size == in_buf + buf_size)
-                     ? in_buf
-                     : curr_chunk + chunk_size;
+
+    advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
   }
 }
 
