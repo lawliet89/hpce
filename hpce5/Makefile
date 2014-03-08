@@ -1,5 +1,5 @@
 CPPFLAGS=-I -Wall -std=c++11 -O3 -pthread
-CXX=clang++
+CXX=g++
 SHELL=/bin/bash
 
 all: process src/v2

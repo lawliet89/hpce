@@ -6,6 +6,7 @@
 // TODO: temp
 #include <iostream>
 
+/*
 namespace
 {
 struct win_queue_entry
@@ -30,6 +31,7 @@ struct window_state
 
 // does 1d rolling window min/max over the given chunks of rows and accumulates
 // results vertically
+template <unsigned MIN_WINDOW>
 void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
                    uint64_t buf_size, const uint32_t chunk_size,
                    const uint32_t img_width_pix, const uint32_t img_height,
@@ -67,8 +69,14 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
     out_subchunk_cnt = 0;
     curr_out_chunk = out_buf;
 
-    auto le_ge_cmp = [](uint8_t &lhs, uint32_t &rhs){return lhs <= rhs;};
-    auto min_or_max = (const uint8_t&(*)(const uint8_t&, const uint8_t&)) &std::min;
+    if (MIN_WINDOW)
+      std::cerr << "MIN!" << std::endl;
+    else
+      std::cerr << "MAX!" << std::endl;
+
+    auto le_ge_cmp = [](uint8_t& lhs, uint32_t& rhs) { return lhs <= rhs; };
+    auto min_or_max =
+        (const uint8_t & (*)(const uint8_t&, const uint8_t&)) & std::min;
     uint32_t q_init_val = 0xffffffff;
 
     // create and initialise rolling windows
@@ -84,7 +92,6 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
       ws->q_head->value = q_init_val;
       ws->q_head->retire_idx = ws->window_size;
     }
-
 
     // cleanup to be done before terminating thread
     auto clean_memory = [&wss, &num_windows_assigned]() {
@@ -160,14 +167,14 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
             if (ws->q_head >= end)
               ws->q_head = ws->start;
           }
-          //if (curr_val <= ws->q_head->value) {
+          // if (curr_val <= ws->q_head->value) {
           if (le_ge_cmp(curr_val, ws->q_head->value)) {
             ws->q_head->value = curr_val;
             ws->q_head->retire_idx = i + ws->window_size;
             ws->q_tail = ws->q_head;
           } else {
             while (le_ge_cmp(curr_val, ws->q_tail->value)) {
-            //while (curr_val <= ws->q_tail->value) {
+              // while (curr_val <= ws->q_tail->value) {
               if (ws->q_tail == ws->start)
                 ws->q_tail = end;
               --(ws->q_tail);
@@ -254,11 +261,11 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
     return;
   }
 }
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
 
 // does 1d rolling window min/max over the given chunks of rows and accumulates
 // results vertically
@@ -560,4 +567,4 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
     std::cerr << "[Max] Caught exception : " << e.what() << "\n";
     return;
   }
-}
+}*/

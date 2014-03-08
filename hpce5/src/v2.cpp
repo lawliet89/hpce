@@ -59,9 +59,8 @@ int main(int argc, char *argv[]) {
         allocateBuffer(bufferSize, firstOp == Operation::DILATE);
     stdoutBuffer = allocateBuffer(bufferSize);
 
-    auto pass1 = firstOp == Operation::ERODE ? window_1d_min : window_1d_max;
-    auto pass2 = firstOp == Operation::ERODE ? window_1d_max : window_1d_min;
-
+    auto pass1 = firstOp == Operation::ERODE ? window_1d_min<MAX_S, uint8_t> :window_1d_min<MIN_S, uint8_t>;
+    auto pass2 = firstOp == Operation::ERODE ?window_1d_min<0, uint8_t> : window_1d_min<1, uint8_t>;
     std::cerr << "Image Size: " << imageSize << std::endl;
     std::cerr << "Pass Buffer Size: " << bufferSize << std::endl;
     std::cerr << "Chunk Size: " << chunkSize << std::endl;
