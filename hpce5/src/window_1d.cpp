@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <mutex>
 
+//TODO: temp
+#include <iostream>
+
 namespace
 {
 struct win_queue_entry
@@ -149,9 +152,9 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
       // step all windows by 1 pixel
       for (int m = 0; m < num_windows_assigned; ++m) {
         ws = &wss[m];
-
         win_queue_entry* end = ws->start + ws->window_size;
         uint32_t n_depth = (ws->window_size - 1) / 2;
+
         if (ws->q_head->retire_idx == i) {
           ws->q_head++;
           if (ws->q_head >= end)
