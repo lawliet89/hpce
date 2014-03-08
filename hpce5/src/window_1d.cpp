@@ -230,32 +230,6 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
             if (out_subchunk_cnt != 0)
               consumer.produce(std::move(lock));
 
-            // while (++j < chunk_size) {
-            //   uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
-            //   acc0 += (acc0 < in_buf ? buf_size : 0);
-
-            //   output_synced(*acc0);
-            // }
-
-            // advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
-
-            // // flush any extra accumulators for partial diamonds along the
-            // bottom
-            // // of the image (N virtual extra rows)
-            // // note: could output until at consumer chunk boundary and then
-            // used
-            // // memcpy as the accumulators can be output as-is
-            // for (uint64_t p = 0; p < extra_chunks; ++p) {
-            //   for (uint32_t j = 0; j < chunk_size; ++j) {
-            //     uint8_t* acc0 = curr_chunk + j - (2 * n_levels) *
-            // img_w_bytes;
-            //     acc0 += (acc0 < in_buf ? buf_size : 0);
-
-            //     output_synced(*acc0);
-            //   }
-            //   advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
-            // }
-
             // reset state at the end of image for next image
             resetLock = consumer.waitForReset();
 
