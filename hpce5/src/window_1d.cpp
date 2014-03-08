@@ -113,7 +113,7 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
         acc0 += (acc0 < in_buf ? buf_size : 0);
 
         *(curr_out_chunk + out_subchunk_cnt) = std::min(*acc0, curr_val);
-        if (out_subchunk_cnt++ == chunk_size - 1) {
+        if (++out_subchunk_cnt == chunk_size) {
           consumer.produce(std::move(lock));
           lock = consumer.producerWait();
 
@@ -196,7 +196,7 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
             acc0 += (acc0 < in_buf ? buf_size : 0);
 
             *(curr_out_chunk + out_subchunk_cnt) = *acc0;
-            if (out_subchunk_cnt++ == chunk_size - 1) {
+            if (++out_subchunk_cnt == chunk_size) {
               // signal production of chunk and wait for a consumption of the
               // previous chunk
               consumer.produce(std::move(lock));
