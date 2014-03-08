@@ -8,10 +8,42 @@ well on their own as separate threads. These disparate threads can then be
 strung together to form a multi-threaded application through the use of buffers
 and synchronisation primitives.
 
+Each module has a producer/consumer relationship with its upstream producer
+and downstream consumer. Synchronisation is performed by a consistent set
+of APIs and procedures using the ReadWriteSync class which essentially
+encapsulates some mutex, conditional variables and locks, along with methods
+for performing synchronisation using these primitives in an abstract manner.
+
 Performing a n levels erosion or dilation can be thought of as a minimisation
 or maximisation of the n Manhattan Distance Von Neumann neighbourhood of some
 pixel. Since minimisation and maximisation are both associative, and
-commutative, it does not matter which order
+commutative, it does not matter which order the are performed.
+
+Consider the each pass of dilation or erosion with n levels. For some pixel,
+information for pixels n rows above and below would be necessary. As such, the
+buffer holding intermediate max/min results would have to be at least be able to
+2n rows of pixels plus the pixel itself. This is the minimum size of the buffer
+between each module. The buffer size is rounded up to a power of two to try and
+take advantage of the memory cache system, as well as to easily facillitate
+calculating a factor of the buffer size.
+
+Work is performed from the first module all the way to the last module in
+units of chunks. For each chunk read from stdin, the passes would process
+the chunks in turn, and finally written out to stdout as a full chunk. The
+buffers are implemented as circular buffers, and to facillitate operations,
+the chunk size should be a factor of the buffer size. As the buffer size is a
+power of two, any powers of two smaller than the buffer size is necessarily
+one of its factors. Thus, the chunk size is calculated this way, subjected to
+a floor and ceiling value.
+
+For each pixel, the threads handling the reading and writing from stdin and
+stdout respectively will process a chunk, and then synchronise with its
+downstream and upstream modules respectively. In particular, the modules have
+to be mindful of the end of an image due to the fact that chunk size might not
+necessarily be a factor of the image size. They have to be mindful not to expect
+more bytes than is avaialble and write more bytes than required.
+
+
 ===============================================================================
 Verification Methodology
 ===============================================================================
