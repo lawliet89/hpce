@@ -90,6 +90,20 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
                     : chunk_ptr + chunk_size;
   };
 
+  // write one pixel to the output buffer, synchronising with the consumer at
+  // consumer chunk boundaries
+  auto output_synced = [&](uint8_t value) {
+    *(curr_out_chunk + out_subchunk_cnt) = value;
+    if (++out_subchunk_cnt == chunk_size) {
+      consumer.produce(std::move(lock));
+      lock = consumer.producerWait();
+
+      advance_chunk_ptr(curr_out_chunk, chunk_size, out_buf, buf_size);
+
+      out_subchunk_cnt = 0;
+    }
+  };
+
   // main thread loop
   while (1) {
     producer.consumerWait();
@@ -112,15 +126,7 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
         uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
         acc0 += (acc0 < in_buf ? buf_size : 0);
 
-        *(curr_out_chunk + out_subchunk_cnt) = std::min(*acc0, curr_val);
-        if (++out_subchunk_cnt == chunk_size) {
-          consumer.produce(std::move(lock));
-          lock = consumer.producerWait();
-
-          advance_chunk_ptr(curr_out_chunk, chunk_size, out_buf, buf_size);
-
-          out_subchunk_cnt = 0;
-        }
+        output_synced(std::min(*acc0, curr_val));
       }
 
       // step all windows by 1 pixel
@@ -158,6 +164,7 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
             curr_chunk + j - (2 * n_levels - n_depth) * img_w_bytes - n_depth;
         acc2 += (acc2 < in_buf ? buf_size : 0);
 
+        // do not process windows that aren't centered within the image
         if (i >= n_depth) {
           *acc1 = std::min(*acc1, (uint8_t)ws->q_head->value);
           *acc2 = std::min(*acc2, (uint8_t)ws->q_head->value);
@@ -189,46 +196,41 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
       // if at the start of a row, restart the windows' state
       if (++i == img_w_bytes) {
         i = 0;
+        // if done with image input
         if (++row_cnt == img_height) {
           // finish current chunk with accumulator drain (no window updates)
           while (++j < chunk_size) {
             uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
             acc0 += (acc0 < in_buf ? buf_size : 0);
 
-            *(curr_out_chunk + out_subchunk_cnt) = *acc0;
-            if (++out_subchunk_cnt == chunk_size) {
-              // signal production of chunk and wait for a consumption of the
-              // previous chunk
-              consumer.produce(std::move(lock));
-              lock = consumer.producerWait();
-
-              advance_chunk_ptr(curr_out_chunk, chunk_size, out_buf, buf_size);
-
-              out_subchunk_cnt = 0;
-            }
+            output_synced(*acc0);
           }
 
           advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
 
-          // flush any extra accumulators for extra N rows at the bottom of the
-          // image
+          // flush any extra accumulators for partial diamonds along the bottom
+          // of the image (N virtual extra rows)
+          // note: could output until at consumer chunk boundary and then used
+          // memcpy as the accumulators can be output as-is
           for (uint64_t p = 0; p < extra_chunks; ++p) {
             for (uint32_t j = 0; j < chunk_size; ++j) {
               uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
               acc0 += (acc0 < in_buf ? buf_size : 0);
 
-              *(curr_out_chunk + out_subchunk_cnt) = *acc0;
-              if (++out_subchunk_cnt == chunk_size) {
-                // signal production of chunk and wait for a consumption of the
-                // previous chunk
-                consumer.produce(std::move(lock));
-                lock = consumer.producerWait();
+              //  *(curr_out_chunk + out_subchunk_cnt) = *acc0;
+              //  if (++out_subchunk_cnt == chunk_size) {
+              //    // signal production of chunk and wait for a consumption of
+              // the
+              //    // previous chunk
+              //    consumer.produce(std::move(lock));
+              //    lock = consumer.producerWait();
 
-                advance_chunk_ptr(curr_out_chunk, chunk_size, out_buf,
-                                  buf_size);
+              //    advance_chunk_ptr(curr_out_chunk, chunk_size, out_buf,
+              //                      buf_size);
 
-                out_subchunk_cnt = 0;
-              }
+              //    out_subchunk_cnt = 0;
+              //  }
+              output_synced(*acc0);
             }
 
             advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
