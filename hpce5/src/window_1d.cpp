@@ -61,7 +61,7 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
 
   img_w_bytes = (img_width_pix * 8) / bit_width;
   uint64_t chunks_per_img =
-      ((img_height * img_w_bytes) + chunk_size - 1) / chunk_size;
+      ((img_height * img_w_bytes)) / chunk_size;
   uint64_t chunks_per_img_padded =
       (((img_height + n_levels) * img_w_bytes) + chunk_size - 1) / chunk_size;
   extra_chunks = chunks_per_img_padded - chunks_per_img;
@@ -301,7 +301,7 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
     i = 0;
     img_w_bytes = (img_width_pix * 8) / bit_width;
     uint64_t chunks_per_img =
-        ((img_height * img_w_bytes) + chunk_size - 1) / chunk_size;
+        ((img_height * img_w_bytes)) / chunk_size;
     uint64_t chunks_per_img_padded =
         (((img_height + n_levels) * img_w_bytes) + chunk_size - 1) / chunk_size;
     extra_chunks = chunks_per_img_padded - chunks_per_img;
