@@ -1,19 +1,18 @@
 #include "include/read_write_sync.hpp"
 #include <iostream>
 
-void ReadWriteSync::setName(std::string name) {
-  this -> name = name;
-}
+void ReadWriteSync::setName(std::string name) { this->name = name; }
 
 std::unique_lock<std::mutex> ReadWriteSync::producerWait() {
   if (debug)
-    std::cerr << "[" << name << " Read] Waiting to start read" << std::endl;
+    std::cerr << "[" << name << " Consume] Waiting to start read" << std::endl;
 
   std::unique_lock<std::mutex> lk(m);
   cv.wait(lk, [&] {
     if (debug) {
-      std::cerr << "[" << name << " Read] Woken. Checking semaphore = "
-         << semaphore << std::endl;
+      std::cerr << "[" << name
+                << " Consume] Woken. Checking semaphore = " << semaphore
+                << std::endl;
     }
     return semaphore < 0;
   });
@@ -22,7 +21,7 @@ std::unique_lock<std::mutex> ReadWriteSync::producerWait() {
 
 void ReadWriteSync::produce(std::unique_lock<std::mutex> &&lk) {
   if (debug)
-    std::cerr << "[" << name << " Read] Read done. Updating semaphore."
+    std::cerr << "[" << name << " Consume] Read done. Updating semaphore."
               << std::endl;
   semaphore += quanta;
   lk.unlock();
@@ -30,6 +29,8 @@ void ReadWriteSync::produce(std::unique_lock<std::mutex> &&lk) {
 }
 
 void ReadWriteSync::signalEof() {
+  if (debug)
+    std::cerr << "[" << name << " Consume] EOF reached" << std::endl;
   _eof = true;
 }
 
@@ -38,7 +39,8 @@ void ReadWriteSync::consumerWait() {
   if (debug)
     std::cerr << "[" << name << " Consume] Waiting for read to be done..."
               << std::endl;
-  while (semaphore != 0 && !_eof);
+  while (semaphore != 0 && !_eof)
+    ;
 }
 
 void ReadWriteSync::consume() {
@@ -55,19 +57,15 @@ void ReadWriteSync::hintProducer() {
   cv.notify_all();
 }
 
-bool ReadWriteSync::eof() {
-  return _eof;
-}
+bool ReadWriteSync::eof() { return _eof; }
 
 std::unique_lock<std::mutex> ReadWriteSync::waitForReset() {
   std::unique_lock<std::mutex> lk(resetMutex);
   if (debug)
-    std::cerr << "[" << name << " Read] Waiting for reset.. " << std::endl;
-  resetCv.wait(lk, [&] {
-    return reset;
-  });
+    std::cerr << "[" << name << " Consume] Waiting for reset.. " << std::endl;
+  resetCv.wait(lk, [&] { return reset; });
   if (debug)
-    std::cerr << "[" << name << " Read] Resetting " << std::endl;
+    std::cerr << "[" << name << " Consume] Resetting " << std::endl;
   return lk;
 }
 
