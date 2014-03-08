@@ -43,9 +43,35 @@ to be mindful of the end of an image due to the fact that chunk size might not
 necessarily be a factor of the image size. They have to be mindful not to expect
 more bytes than is avaialble and write more bytes than required.
 
+For the purposes of the discussion below, we will consider an erosion pass --
+dilation will be analogous.
+
+Consider an n levels erosion operation and the corresponding n distance Von
+Neumann neighbourhood of some pixel in the shape of a diamond. Minimisation
+of pixel values will first be done row-wise and then accumulated for each
+column until the pixel at the bottom of the diamond at which point the pixel
+would have been fully processed. If we think in terms of the overlapping diamonds
+for every pixel in an image, we can see that each pixel is also part of a row of
+the diamond of 2n other pixels. To process each pixel would mean to process
+2n+1 minimisations over window sizes ranging from 1 to n+1. This window
+minimisation can be performed efficiently in O(1) amortised using the algorithm
+presented in http://goo.gl/eXGis3. Also, notice that except for the window of
+size 2n+1, the minimisation done for an upper diamond of one pixel is essentially
+that of a lower diamond of another pixel. Thus the work done can be almost halved.
+
+The erosion and dilation modules will perform their respective minimisation and
+maximisation described above. It also handles synchronisation using the primitives
+described above. Finally, they also have to "prime" and "drain" their process
+pipeline accordingly.
 
 ===============================================================================
 Verification Methodology
+
+Corectness is crucial in the operation of the algorithm. Correctness is checked
+by performing a binary comparison of the ouputs from the reference implementation
+and our implementation using an identical randomly generated input from
+/dev/urandom. Tests were performed for images with dimensions of a power of two,
+and "odd" sizes using the various levels.
 ===============================================================================
 Work Partition
 
