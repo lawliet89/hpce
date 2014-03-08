@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <mutex>
 
-//TODO: temp
+// TODO: temp
 #include <iostream>
 
 namespace
@@ -218,29 +218,40 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
         i = 0;
         // if done with image input
         if (++row_cnt == img_height) {
-          // finish current chunk with accumulator drain (no window updates)
-          while (++j < chunk_size) {
-            uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
-            acc0 += (acc0 < in_buf ? buf_size : 0);
 
+          uint8_t* acc0 = curr_chunk + j + 1 - (2 * n_levels) * img_w_bytes;
+          acc0 += (acc0 < in_buf ? buf_size : 0);
+          for (uint64_t p = 0; p < img_w_bytes * n_levels; ++p) {
             output_synced(*acc0);
+            acc0 = (acc0 + 1 == in_buf + buf_size) ? in_buf : acc0 + 1;
           }
+          if (out_subchunk_cnt != 0)
+            consumer.produce(std::move(lock));
 
-          advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
+          // while (++j < chunk_size) {
+          //   uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
+          //   acc0 += (acc0 < in_buf ? buf_size : 0);
 
-          // flush any extra accumulators for partial diamonds along the bottom
-          // of the image (N virtual extra rows)
-          // note: could output until at consumer chunk boundary and then used
-          // memcpy as the accumulators can be output as-is
-          for (uint64_t p = 0; p < extra_chunks; ++p) {
-            for (uint32_t j = 0; j < chunk_size; ++j) {
-              uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
-              acc0 += (acc0 < in_buf ? buf_size : 0);
+          //   output_synced(*acc0);
+          // }
 
-              output_synced(*acc0);
-            }
-            advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
-          }
+          // advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
+
+          // // flush any extra accumulators for partial diamonds along the
+          // bottom
+          // // of the image (N virtual extra rows)
+          // // note: could output until at consumer chunk boundary and then
+          // used
+          // // memcpy as the accumulators can be output as-is
+          // for (uint64_t p = 0; p < extra_chunks; ++p) {
+          //   for (uint32_t j = 0; j < chunk_size; ++j) {
+          //     uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
+          //     acc0 += (acc0 < in_buf ? buf_size : 0);
+
+          //     output_synced(*acc0);
+          //   }
+          //   advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
+          // }
 
           // reset state at the end of image for next image
           resetLock = consumer.waitForReset();
@@ -328,6 +339,12 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
     //////////////////////////
     serial_hack = 1;
   }
+  auto advance_chunk_ptr = [](uint8_t*& chunk_ptr, uint32_t chunk_size,
+                              uint8_t* buf_base, uint64_t buf_size) {
+    chunk_ptr = (chunk_ptr + chunk_size == buf_base + buf_size)
+                    ? buf_base
+                    : chunk_ptr + chunk_size;
+  };
 
   // reset
   consumer.resetDone(std::move(resetLock));
@@ -446,65 +463,81 @@ void window_1d_max(uint8_t* const in_buf, uint8_t* const out_buf,
         i = 0;
         if (++row_cnt == img_height) {
 
-          // finish current chunk
-          while (++j < chunk_size) {
-            uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
-            acc0 += (acc0 < in_buf ? buf_size : 0);
-
-            // fprintf(stderr, "OUT FIRSTDRAIN: %2x\n", *acc0);  // TODO: output
-            // here
-            //    write(STDOUT_FILENO, acc0, 1);
-
+          uint8_t* acc0 = curr_chunk + j + 1 - (2 * n_levels) * img_w_bytes;
+          acc0 += (acc0 < in_buf ? buf_size : 0);
+          for (uint64_t p = 0; p < img_w_bytes * n_levels; ++p) {
             *(curr_out_chunk + out_subchunk_cnt) = *acc0;
-            if (out_subchunk_cnt++ == chunk_size - 1) {
-              // TODO: SYNC: .produce() followed by .wait
-              // TODO: sync for the starting chunk here
+            if (++out_subchunk_cnt == chunk_size) {
               consumer.produce(std::move(lock));
               lock = consumer.producerWait();
-              // write(STDOUT_FILENO, curr_out_chunk, chunk_size);
-
-              curr_out_chunk += chunk_size;
-              curr_out_chunk -=
-                  (curr_out_chunk >= out_buf + buf_size) ? buf_size : 0;
-
+              advance_chunk_ptr(curr_out_chunk, chunk_size, out_buf, buf_size);
               out_subchunk_cnt = 0;
             }
-            // fprintf(stderr, "OUT: %2x\n", std::min(*acc0, curr_val));
+            acc0 = (acc0 + 1 == in_buf + buf_size) ? in_buf : acc0 + 1;
           }
-          curr_chunk = (curr_chunk + chunk_size == in_buf + buf_size)
-                           ? in_buf
-                           : curr_chunk + chunk_size;
+          if (out_subchunk_cnt != 0)
+            consumer.produce(std::move(lock));
 
-          // for any extra chunks: do them (with flow control!)
-          for (uint64_t p = 0; p < extra_chunks; ++p) {
-            // TODO: flow control for output  here!
-            for (uint32_t j = 0; j < chunk_size; ++j) {
-              uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
-              acc0 += (acc0 < in_buf ? buf_size : 0);
+          // // finish current chunk
+          // while (++j < chunk_size) {
+          //   uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
+          //   acc0 += (acc0 < in_buf ? buf_size : 0);
 
-              // fprintf(stderr, "OUT: %2x\n", *acc0);  // TODO: output here
-              //  write(STDOUT_FILENO, acc0, 1);
-              *(curr_out_chunk + out_subchunk_cnt) = *acc0;
-              if (out_subchunk_cnt++ == chunk_size - 1) {
-                // TODO: SYNC: .produce() followed by .wait
-                // TODO: sync for the starting chunk here
-                consumer.produce(std::move(lock));
-                lock = consumer.producerWait();
-                // write(STDOUT_FILENO, curr_out_chunk, chunk_size);
+          //   // fprintf(stderr, "OUT FIRSTDRAIN: %2x\n", *acc0);  // TODO:
+          // output
+          //   // here
+          //   //    write(STDOUT_FILENO, acc0, 1);
 
-                curr_out_chunk += chunk_size;
-                curr_out_chunk -=
-                    (curr_out_chunk >= out_buf + buf_size) ? buf_size : 0;
+          //   *(curr_out_chunk + out_subchunk_cnt) = *acc0;
+          //   if (out_subchunk_cnt++ == chunk_size - 1) {
+          //     // TODO: SYNC: .produce() followed by .wait
+          //     // TODO: sync for the starting chunk here
+          //     consumer.produce(std::move(lock));
+          //     lock = consumer.producerWait();
+          //     // write(STDOUT_FILENO, curr_out_chunk, chunk_size);
 
-                out_subchunk_cnt = 0;
-              }
-            }
-            curr_chunk = (curr_chunk + chunk_size == in_buf + buf_size)
-                             ? in_buf
-                             : curr_chunk + chunk_size;
+          //     curr_out_chunk += chunk_size;
+          //     curr_out_chunk -=
+          //         (curr_out_chunk >= out_buf + buf_size) ? buf_size : 0;
 
-            // fprintf(stderr, "\nextra chunk done!\n");
-          }
+          //     out_subchunk_cnt = 0;
+          //   }
+          //   // fprintf(stderr, "OUT: %2x\n", std::min(*acc0, curr_val));
+          // }
+          // curr_chunk = (curr_chunk + chunk_size == in_buf + buf_size)
+          //                  ? in_buf
+          //                  : curr_chunk + chunk_size;
+
+          // // for any extra chunks: do them (with flow control!)
+          // for (uint64_t p = 0; p < extra_chunks; ++p) {
+          //   // TODO: flow control for output  here!
+          //   for (uint32_t j = 0; j < chunk_size; ++j) {
+          //     uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
+          //     acc0 += (acc0 < in_buf ? buf_size : 0);
+
+          //     // fprintf(stderr, "OUT: %2x\n", *acc0);  // TODO: output here
+          //     //  write(STDOUT_FILENO, acc0, 1);
+          //     *(curr_out_chunk + out_subchunk_cnt) = *acc0;
+          //     if (out_subchunk_cnt++ == chunk_size - 1) {
+          //       // TODO: SYNC: .produce() followed by .wait
+          //       // TODO: sync for the starting chunk here
+          //       consumer.produce(std::move(lock));
+          //       lock = consumer.producerWait();
+          //       // write(STDOUT_FILENO, curr_out_chunk, chunk_size);
+
+          //       curr_out_chunk += chunk_size;
+          //       curr_out_chunk -=
+          //           (curr_out_chunk >= out_buf + buf_size) ? buf_size : 0;
+
+          //       out_subchunk_cnt = 0;
+          //     }
+          //   }
+          //   curr_chunk = (curr_chunk + chunk_size == in_buf + buf_size)
+          //                    ? in_buf
+          //                    : curr_chunk + chunk_size;
+
+          //   // fprintf(stderr, "\nextra chunk done!\n");
+          // }
 
           // TODO
           // fprintf(stderr, "\nDONE!\n");
