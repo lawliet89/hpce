@@ -83,6 +83,15 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
     ws->q_head->retire_idx = ws->window_size;
   }
 
+  // cleanup to be done before terminating thread
+  auto clean_memory = [&wss, &num_windows_assigned]() {
+    for (int m = 0; m < num_windows_assigned; ++m) {
+      window_state* ws = &wss[m];
+      delete[] ws->start;
+    }
+    delete[] wss;
+  };
+
   // circular buffer access for chunked buffers (both in and out)
   auto advance_chunk_ptr = [](uint8_t*& chunk_ptr, uint32_t chunk_size,
                               uint8_t* buf_base, uint64_t buf_size) {
@@ -103,7 +112,8 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
     }
   };
 
-  // reset
+  // synchronisation barrier, all threads in chain need to be ready before
+  // reading first chunk
   consumer.resetDone(std::move(resetLock));
   producer.signalReset();
 
@@ -113,8 +123,10 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
   while (1) {
     producer.consumerWait();
 
+    // if last frame of input sequence, clean up
     if (producer.eof()) {
       consumer.signalEof();
+      clean_memory();
       return;
     }
 
@@ -227,14 +239,13 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
             advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
           }
 
-          // TODO
-          // synchronise reset
+          // reset state at the end of image for next image
           resetLock = consumer.waitForReset();
 
-          // reset
+          // TODO: given time, implement fully correct reset...
+
           consumer.resetDone(std::move(resetLock));
           producer.signalReset();
-          // TODO once: free memory at thread cleanup
         }
       }
     }
