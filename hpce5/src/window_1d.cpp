@@ -49,7 +49,7 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
   window_state* wss;
   window_state* ws;
 
-  // TODO: move below initialisation?
+  // TODO: why?
   std::unique_lock<std::mutex> lock = consumer.producerWait();
 
   // initialise counters and compute chunk padding for extra N rows
@@ -97,9 +97,7 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
     if (++out_subchunk_cnt == chunk_size) {
       consumer.produce(std::move(lock));
       lock = consumer.producerWait();
-
       advance_chunk_ptr(curr_out_chunk, chunk_size, out_buf, buf_size);
-
       out_subchunk_cnt = 0;
     }
   };
@@ -217,22 +215,8 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
               uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
               acc0 += (acc0 < in_buf ? buf_size : 0);
 
-              //  *(curr_out_chunk + out_subchunk_cnt) = *acc0;
-              //  if (++out_subchunk_cnt == chunk_size) {
-              //    // signal production of chunk and wait for a consumption of
-              // the
-              //    // previous chunk
-              //    consumer.produce(std::move(lock));
-              //    lock = consumer.producerWait();
-
-              //    advance_chunk_ptr(curr_out_chunk, chunk_size, out_buf,
-              //                      buf_size);
-
-              //    out_subchunk_cnt = 0;
-              //  }
               output_synced(*acc0);
             }
-
             advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
           }
 
@@ -247,7 +231,7 @@ void window_1d_min(uint8_t* const in_buf, uint8_t* const out_buf,
         }
       }
     }
-
+    // done with input chunk
     advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
   }
 }
