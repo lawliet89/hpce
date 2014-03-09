@@ -61,15 +61,40 @@ int main(int argc, char *argv[])
         allocateBuffer(bufferSize, firstOp == Operation::DILATE);
     stdoutBuffer = allocateBuffer(bufferSize);
 
-    //    auto pass1 = firstOp == Operation::ERODE ? window_1d_min :
-    // window_1d_max;
-    //    auto pass2 = firstOp == Operation::ERODE ? window_1d_max :
-    // window_1d_min;
 
-    auto pass1 =
-        firstOp == Operation::ERODE ? window_1d_1byte<MIN_PASS> : window_1d_1byte<MAX_PASS>;
-    auto pass2 =
-        firstOp == Operation::ERODE ? window_1d_1byte<MAX_PASS> : window_1d_1byte<MIN_PASS>;
+    // function objects for first and second pass windows
+    std::function<void(uint8_t * const, uint8_t * const, const uint64_t,
+                       const uint32_t, const uint32_t, const uint32_t,
+                       const uint32_t, const uint8_t, ReadWriteSync &,
+                       ReadWriteSync &)> pass1;
+
+    std::function<void(uint8_t * const, uint8_t * const, const uint64_t,
+                       const uint32_t, const uint32_t, const uint32_t,
+                       const uint32_t, const uint8_t, ReadWriteSync &,
+                       ReadWriteSync &)> pass2;
+
+    // bind to correct compile-time version:
+    if (bits == 8) {
+      pass1 = (firstOp == Operation::ERODE) ? window_1d_1byte<MIN_PASS>
+                                            : window_1d_1byte<MAX_PASS>;
+
+      pass2 = (firstOp == Operation::ERODE) ? window_1d_1byte<MAX_PASS>
+                                            : window_1d_1byte<MIN_PASS>;
+    } else if (bits == 16) {
+      pass1 = (firstOp == Operation::ERODE)
+                  ? window_1d_multibyte<MIN_PASS, uint16_t>
+                  : window_1d_multibyte<MAX_PASS, uint16_t>;
+      pass2 = (firstOp == Operation::ERODE)
+                  ? window_1d_multibyte<MAX_PASS, uint16_t>
+                  : window_1d_multibyte<MIN_PASS, uint16_t>;
+    } else if (bits == 32) {
+      pass1 = (firstOp == Operation::ERODE)
+                  ? window_1d_multibyte<MIN_PASS, uint32_t>
+                  : window_1d_multibyte<MAX_PASS, uint32_t>;
+      pass2 = (firstOp == Operation::ERODE)
+                  ? window_1d_multibyte<MAX_PASS, uint32_t>
+                  : window_1d_multibyte<MIN_PASS, uint32_t>;
+    }
 
     std::cerr << "Image Size: " << imageSize << std::endl;
     std::cerr << "Pass Buffer Size: " << bufferSize << std::endl;
