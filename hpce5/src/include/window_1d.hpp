@@ -122,7 +122,7 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
   consumer.resetDone(std::move(resetLock));
   producer.signalReset();
 
-  // TODO: needed?
+  // prepare for production
   lock = consumer.producerWait();
 
   // main thread loop
