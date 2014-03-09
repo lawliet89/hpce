@@ -6,9 +6,6 @@
 #include <cstdint>
 #include <mutex>
 
-// TODO: temp
-#include <iostream>
-
 // public
 enum {
   MAX_PASS = 0,
@@ -33,12 +30,18 @@ struct window_state
 };
 }
 
+// Thread slides horizontal 1d windows over streamed input, which are assembled
+// vertically into the full SE (reusing windows in an optimal manner).
+// Does O(n) work per input pixel, windows can be independently in separate
+// threads, enabling pixels to be processed in O(1) time.
+// Approach based on the ascending minima algorithm by Richard Harter:
+// http://web.archive.org/web/20120805114719/http://home.tiac.net/~cri/2001/slidingmin.html
 template <unsigned op_select>
-void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
-               const uint32_t chunk_size, const uint32_t img_width_pix,
-               const uint32_t img_height, const uint32_t n_levels,
-               const uint8_t bit_width, ReadWriteSync& producer,
-               ReadWriteSync& consumer)
+void window_1d_1byte(uint8_t* const in_buf, uint8_t* const out_buf,
+                     uint64_t buf_size, const uint32_t chunk_size,
+                     const uint32_t img_width_pix, const uint32_t img_height,
+                     const uint32_t n_levels, const uint8_t bit_width,
+                     ReadWriteSync& producer, ReadWriteSync& consumer)
 {
   uint32_t img_w_bytes = (img_width_pix * 8) / bit_width;
 
@@ -241,7 +244,8 @@ void window_1d(uint8_t* const in_buf, uint8_t* const out_buf, uint64_t buf_size,
           // reset state at the end of image for next image
           resetLock = consumer.waitForReset();
 
-          // TODO: given time, implement fully correct reset...
+          // TODO: given time, implement fully correct reset of internal state
+          // (not critical for spec)...
 
           // sync and signal reset up the chain to the producer
           consumer.resetDone(std::move(resetLock));

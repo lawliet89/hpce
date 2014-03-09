@@ -67,9 +67,9 @@ int main(int argc, char *argv[])
     // window_1d_min;
 
     auto pass1 =
-        firstOp == Operation::ERODE ? window_1d<MIN_PASS> : window_1d<MAX_PASS>;
+        firstOp == Operation::ERODE ? window_1d_1byte<MIN_PASS> : window_1d_1byte<MAX_PASS>;
     auto pass2 =
-        firstOp == Operation::ERODE ? window_1d<MAX_PASS> : window_1d<MIN_PASS>;
+        firstOp == Operation::ERODE ? window_1d_1byte<MAX_PASS> : window_1d_1byte<MIN_PASS>;
 
     std::cerr << "Image Size: " << imageSize << std::endl;
     std::cerr << "Pass Buffer Size: " << bufferSize << std::endl;
