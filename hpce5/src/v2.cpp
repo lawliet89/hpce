@@ -61,25 +61,23 @@ int main(int argc, char *argv[])
         allocateBuffer(bufferSize, firstOp == Operation::DILATE);
     stdoutBuffer = allocateBuffer(bufferSize);
 
-
     // function objects for first and second pass windows
     std::function<void(uint8_t * const, uint8_t * const, const uint64_t,
                        const uint32_t, const uint32_t, const uint32_t,
-                       const uint32_t, const uint8_t, ReadWriteSync &,
-                       ReadWriteSync &)> pass1;
+                       const uint32_t, ReadWriteSync &, ReadWriteSync &)> pass1;
 
     std::function<void(uint8_t * const, uint8_t * const, const uint64_t,
                        const uint32_t, const uint32_t, const uint32_t,
-                       const uint32_t, const uint8_t, ReadWriteSync &,
-                       ReadWriteSync &)> pass2;
+                       const uint32_t, ReadWriteSync &, ReadWriteSync &)> pass2;
 
     // bind to correct compile-time version:
     if (bits == 8) {
-      pass1 = (firstOp == Operation::ERODE) ? window_1d_1byte<MIN_PASS>
-                                            : window_1d_1byte<MAX_PASS>;
-
-      pass2 = (firstOp == Operation::ERODE) ? window_1d_1byte<MAX_PASS>
-                                            : window_1d_1byte<MIN_PASS>;
+      pass1 = (firstOp == Operation::ERODE)
+                  ? window_1d_multibyte<MIN_PASS, uint8_t>
+                  : window_1d_multibyte<MAX_PASS, uint8_t>;
+      pass2 = (firstOp == Operation::ERODE)
+                  ? window_1d_multibyte<MAX_PASS, uint8_t>
+                  : window_1d_multibyte<MIN_PASS, uint8_t>;
     } else if (bits == 16) {
       pass1 = (firstOp == Operation::ERODE)
                   ? window_1d_multibyte<MIN_PASS, uint16_t>
@@ -102,10 +100,10 @@ int main(int argc, char *argv[])
 
     // Set up concurrency
     std::thread pass1Thread(pass1, stdinBuffer, intermediateBuffer, bufferSize,
-                            chunkSize, w, h, levels, bits, std::ref(stdinSync),
+                            chunkSize, w, h, levels, std::ref(stdinSync),
                             std::ref(passSync));
     std::thread pass2Thread(pass2, intermediateBuffer, stdoutBuffer, bufferSize,
-                            chunkSize, w, h, levels, bits, std::ref(passSync),
+                            chunkSize, w, h, levels, std::ref(passSync),
                             std::ref(stdoutSync));
     std::thread writeThread(writeOutput, stdoutBuffer, chunkSize, bufferSize,
                             imageSize, std::ref(stdoutSync));
