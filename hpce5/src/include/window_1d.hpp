@@ -6,9 +6,6 @@
 #include <cstdint>
 #include <mutex>
 
-// TODO
-#include <iostream>
-
 // public
 enum {
   MAX_PASS = 0,
@@ -272,21 +269,25 @@ void window_1d_multibyte(uint8_t* const in_buf_, uint8_t* const out_buf_,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/*
-template <unsigned op_select>
-void window_1d_1byte(uint8_t* const in_buf, uint8_t* const out_buf,
-                     uint64_t buf_size, const uint32_t chunk_size,
-                     const uint32_t img_width_pix, const uint32_t img_height,
-                     const uint32_t n_levels,
-                     ReadWriteSync& producer, ReadWriteSync& consumer)
+// 1,2,4 bit cases
+template <unsigned op_select, unsigned bit_width>
+void window_1d_subbyte(uint8_t* const in_buf, uint8_t* const out_buf,
+                       uint64_t buf_size, const uint32_t chunk_size,
+                       const uint32_t img_width_pix, const uint32_t img_height,
+                       const uint32_t n_levels, ReadWriteSync& producer,
+                       ReadWriteSync& consumer)
 {
-  uint32_t img_w_bytes = img_width_pix;  // dedicated 1 byte case
+  uint32_t img_w_bytes = (img_width_pix * bit_width) / 8;  // process in bytes
 
   uint32_t i;                 // pixels per row counter
   uint32_t row_cnt;           // row counter
   uint8_t* curr_chunk;        // ptr to current input chunk
   uint32_t out_subchunk_cnt;  // output pixel counter within a chunk
   uint8_t* curr_out_chunk;    // ptr to current output chunk
+
+  uint8_t subbyte_mask;
+  uint8_t subbyte_mask_init;
+  uint8_t subbyte_mask_base;
 
   // window state
   uint32_t num_windows_assigned;
@@ -302,6 +303,13 @@ void window_1d_1byte(uint8_t* const in_buf, uint8_t* const out_buf,
   curr_chunk = in_buf;
   out_subchunk_cnt = 0;
   curr_out_chunk = out_buf;
+
+  // init subbyte state (1,2,4 bit possibilities)
+  subbyte_mask_init =
+      (bit_width == 4) ? 0xf0 : ((bit_width == 2) ? 0xc0 : 0x80);
+  subbyte_mask_base =
+      (bit_width == 4) ? 0x0f : ((bit_width == 2) ? 0x03 : 0x01);
+  subbyte_mask = subbyte_mask_init;
 
   // min or max pass (compile time decision)
   auto le_ge_cmp = (op_select == MIN_PASS)
@@ -345,7 +353,7 @@ void window_1d_1byte(uint8_t* const in_buf, uint8_t* const out_buf,
                     : chunk_ptr + chunk_size;
   };
 
-  // write one pixel to the output buffer, synchronising with the consumer at
+  // write one byte to the output buffer, synchronising with the consumer at
   // output chunk boundaries
   auto output_synced = [&](uint8_t value) {
     *(curr_out_chunk + out_subchunk_cnt) = value;
@@ -379,122 +387,178 @@ void window_1d_1byte(uint8_t* const in_buf, uint8_t* const out_buf,
     producer.consume();       // signal consumption of input chunk
     producer.hintProducer();  // wake up producer
 
-    // iterate through input chunk
+    // iterate through input chunk in byte steps
     for (int j = 0; j < chunk_size; ++j) {
-      uint8_t curr_val = *(curr_chunk + j);
+      uint8_t curr_val_ = *(curr_chunk + j);
 
-      // output vertical accumulator state for the pixel that now has the last
-      // dependency (note: no output for first N rows, then one every pixel)
-      if (row_cnt >= n_levels) {
-        uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
-        acc0 += (acc0 < in_buf ? buf_size : 0);
+      // iterate through pixels in the byte read above
+      uint8_t packing_temp = 0;
+      // fprintf(stderr, "[%u] full : %2x\n", j,curr_val_);
+      for (int t = 0, subbyte_mask = subbyte_mask_init; t < 8 / bit_width;
+           ++t, subbyte_mask >>= bit_width) {
+        uint8_t curr_val_unshifted = curr_val_ & subbyte_mask;
+        uint8_t curr_val = curr_val_unshifted >> (8 - bit_width * (t + 1));
 
-        output_synced(min_or_max(*acc0, curr_val));
-      }
-
-      // step all windows by 1 pixel
-      for (int m = 0; m < num_windows_assigned; ++m) {
-        ws = &wss[m];
-        win_queue_entry<uint8_t>* end = ws->start + ws->window_size;
-        uint32_t n_depth = (ws->window_size - 1) / 2;
-
-        if (ws->q_head->retire_idx == i) {
-          ws->q_head++;
-          if (ws->q_head >= end)
-            ws->q_head = ws->start;
-        }
-        if (le_ge_cmp(curr_val, ws->q_head->value)) {
-          ws->q_head->value = curr_val;
-          ws->q_head->retire_idx = i + ws->window_size;
-          ws->q_tail = ws->q_head;
-        } else {
-          while (le_ge_cmp(curr_val, ws->q_tail->value)) {
-            if (ws->q_tail == ws->start)
-              ws->q_tail = end;
-            --(ws->q_tail);
-          }
-          ++(ws->q_tail);
-          if (ws->q_tail == end)
-            ws->q_tail = ws->start;
-
-          ws->q_tail->value = curr_val;
-          ws->q_tail->retire_idx = i + ws->window_size;
-        }
-
-        uint8_t* acc1 = curr_chunk + j - n_depth * img_w_bytes - n_depth;
-        acc1 += (acc1 < in_buf ? buf_size : 0);
-        uint8_t* acc2 =
-            curr_chunk + j - (2 * n_levels - n_depth) * img_w_bytes - n_depth;
-        acc2 += (acc2 < in_buf ? buf_size : 0);
-
-        // update two corresponding vertical accumulators
-        // skipping windows that aren't centered within the image
-        if (i >= n_depth) {
-          *acc1 = min_or_max(*acc1, (uint8_t)ws->q_head->value);
-          *acc2 = min_or_max(*acc2, (uint8_t)ws->q_head->value);
-        }
-        // at the end of a row, drain window and reset
-        if (i == img_width_pix - 1) {
-          for (uint32_t ii = 1; ii <= n_depth; ++ii) {
-            if (ws->q_head->retire_idx == i + ii) {
-              ws->q_head++;
-              if (ws->q_head >= end)
-                ws->q_head = ws->start;
-            }
-            uint8_t* acc1 =
-                curr_chunk + j + ii - n_depth * img_w_bytes - n_depth;
-            acc1 += (acc1 < in_buf ? buf_size : 0);
-            uint8_t* acc2 = curr_chunk + j + ii -
-                            (2 * n_levels - n_depth) * img_w_bytes - n_depth;
-            acc2 += (acc2 < in_buf ? buf_size : 0);
-
-            *acc1 = min_or_max(*acc1, (uint8_t)ws->q_head->value);
-            *acc2 = min_or_max(*acc2, (uint8_t)ws->q_head->value);
-          }
-          ws->q_tail = ws->q_head;
-          ws->q_head->value = q_init_val;
-          ws->q_head->retire_idx = ws->window_size;
-        }
-      }
-
-      // check for end of a row
-      if (++i == img_width_pix) {
-        i = 0;
-        // if done with image input, drain extra N rows of accumulators as they
-        // are in the correct state
-        if (++row_cnt == img_height) {
-
-          uint8_t* acc0 = curr_chunk + j + 1 - (2 * n_levels) * img_w_bytes;
+        // output vertical accumulator state for the pixel that now has the
+        // last
+        // dependency (note: no output for first N rows, then one every
+        // pixel)
+        if (row_cnt >= n_levels) {
+          uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
           acc0 += (acc0 < in_buf ? buf_size : 0);
 
-          for (uint64_t p = 0; p < img_w_bytes * n_levels; ++p) {
-            output_synced(*acc0);
-            acc0 = (acc0 + 1 == in_buf + buf_size) ? in_buf : acc0 + 1;
+          // pack pixel outputs as they come
+          packing_temp |=
+              min_or_max(((*acc0) & subbyte_mask), curr_val_unshifted);
+
+          // output entire byte when all sub-pixels are done
+          if (t == (8 / bit_width) - 1) {
+            output_synced(packing_temp);
           }
-          // if ended unaligned with an output chunk boundary, signal production
-          // explicitly
-          if (out_subchunk_cnt != 0) {
-            consumer.produce(std::move(lock));
-            lock = consumer.producerWait();
+        }
+
+        // step all windows by 1 pixel
+        for (int m = 0; m < num_windows_assigned; ++m) {
+          ws = &wss[m];
+          win_queue_entry<uint8_t>* end = ws->start + ws->window_size;
+          uint32_t n_depth = (ws->window_size - 1) / 2;
+
+          if (ws->q_head->retire_idx == i) {
+            ws->q_head++;
+            if (ws->q_head >= end)
+              ws->q_head = ws->start;
+          }
+          if (le_ge_cmp(curr_val, ws->q_head->value)) {
+
+            ws->q_head->value = curr_val;
+            ws->q_head->retire_idx = i + ws->window_size;
+            ws->q_tail = ws->q_head;
+          } else {
+            while (le_ge_cmp(curr_val, ws->q_tail->value)) {
+              if (ws->q_tail == ws->start)
+                ws->q_tail = end;
+              --(ws->q_tail);
+            }
+            ++(ws->q_tail);
+            if (ws->q_tail == end)
+              ws->q_tail = ws->start;
+
+            ws->q_tail->value = curr_val;
+            ws->q_tail->retire_idx = i + ws->window_size;
           }
 
-          // reset state at the end of image for next image
-          resetLock = consumer.waitForReset();
+          // as pixels are packed within bytes, need to calculate how many bytes
+          // and how much to shift by to get to the proper accumulators n_depth
+          // pixels to the left (corresponding to the window's middle pixel)
+          uint32_t bytes_back =
+              (n_depth + ((8 / bit_width) - 1 - t)) / (8 / bit_width);
+          uint32_t acc_sub_pos =
+              (n_depth + ((8 / bit_width) - 1 - t)) % (8 / bit_width);
 
-          // TODO: given time, implement fully correct reset of internal state
-          // (not critical for spec)...
+          uint8_t* acc1 = curr_chunk + j - n_depth * img_w_bytes - bytes_back;
+          acc1 += (acc1 < in_buf ? buf_size : 0);
+          uint8_t* acc2 = curr_chunk + j -
+                          (2 * n_levels - n_depth) * img_w_bytes - bytes_back;
+          acc2 += (acc2 < in_buf ? buf_size : 0);
 
-          // sync and signal reset up the chain to the producer
-          consumer.resetDone(std::move(resetLock));
-          producer.signalReset();
+          // update two corresponding vertical accumulators
+          // skipping windows that aren't centered within the image
+          if (i >= n_depth) {
+            uint8_t upshifted_q_head = (ws->q_head->value)
+                                       << (bit_width * acc_sub_pos);
+            uint8_t merge_mask = subbyte_mask_base << (bit_width * acc_sub_pos);
 
-          break;
+            uint8_t acc1_new =
+                min_or_max(((*acc1) & merge_mask), upshifted_q_head);
+            uint8_t acc2_new =
+                min_or_max(((*acc2) & merge_mask), upshifted_q_head);
+
+            *acc1 = (*acc1 & ~merge_mask) | acc1_new;
+            *acc2 = (*acc2 & ~merge_mask) | acc2_new;
+          }
+          // at the end of a row, drain window and reset
+          if (i == img_width_pix - 1) {
+            for (uint32_t ii = 1; ii <= n_depth; ++ii) {
+              if (ws->q_head->retire_idx == i + ii) {
+                ws->q_head++;
+                if (ws->q_head >= end)
+                  ws->q_head = ws->start;
+              }
+              // as before, calculate byte and intrabyte offsets for the
+              // accumulators to update
+              uint32_t bytes_back =
+                  (n_depth - ii + ((8 / bit_width) - 1 - t)) / (8 / bit_width);
+              uint32_t acc_sub_pos =
+                  (n_depth - ii + ((8 / bit_width) - 1 - t)) % (8 / bit_width);
+
+              uint8_t* acc1 =
+                  curr_chunk + j - n_depth * img_w_bytes - bytes_back;
+              acc1 += (acc1 < in_buf ? buf_size : 0);
+              uint8_t* acc2 = curr_chunk + j -
+                              (2 * n_levels - n_depth) * img_w_bytes -
+                              bytes_back;
+
+              acc2 += (acc2 < in_buf ? buf_size : 0);
+              uint8_t upshifted_q_head = (ws->q_head->value)
+                                         << (bit_width * acc_sub_pos);
+              uint8_t merge_mask = subbyte_mask_base
+                                   << (bit_width * acc_sub_pos);
+
+              uint8_t acc1_new =
+                  min_or_max(((*acc1) & merge_mask), upshifted_q_head);
+              uint8_t acc2_new =
+                  min_or_max(((*acc2) & merge_mask), upshifted_q_head);
+
+              *acc1 = (*acc1 & ~merge_mask) | acc1_new;
+              *acc2 = (*acc2 & ~merge_mask) | acc2_new;
+            }
+            ws->q_tail = ws->q_head;
+            ws->q_head->value = q_init_val;
+            ws->q_head->retire_idx = ws->window_size;
+          }
+        }
+
+        // check for end of a row
+        if (++i == img_width_pix) {
+          i = 0;
+          // if done with image input, drain extra N rows of accumulators as
+          // they are in the correct state
+          if (++row_cnt == img_height) {
+
+            uint8_t* acc0 = curr_chunk + j + 1 - (2 * n_levels) * img_w_bytes;
+            acc0 += (acc0 < in_buf ? buf_size : 0);
+
+            for (uint64_t p = 0; p < img_w_bytes * n_levels; ++p) {
+              output_synced(*acc0);
+              acc0 = (acc0 + 1 == in_buf + buf_size) ? in_buf : acc0 + 1;
+            }
+            // if ended unaligned with an output chunk boundary, signal
+            // production explicitly
+            if (out_subchunk_cnt != 0) {
+              consumer.produce(std::move(lock));
+              lock = consumer.producerWait();
+            }
+
+            // reset state at the end of image for next image
+            resetLock = consumer.waitForReset();
+
+            // TODO: given time, implement fully correct reset of internal state
+            // (not critical for spec)...
+
+            // sync and signal reset up the chain to the producer
+            consumer.resetDone(std::move(resetLock));
+            producer.signalReset();
+
+            // break out of the double loop nest (cleaner way)
+            goto break2;
+          }
         }
       }
     }
+  break2:
     // done with input chunk
     advance_chunk_ptr(curr_chunk, chunk_size, in_buf, buf_size);
   }
 }
-*/
+
 #endif

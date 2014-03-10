@@ -71,7 +71,31 @@ int main(int argc, char *argv[])
                        const uint32_t, ReadWriteSync &, ReadWriteSync &)> pass2;
 
     // bind to correct compile-time version:
-    if (bits == 8) {
+    if (bits == 1) {
+      pass1 = (firstOp == Operation::ERODE)
+                  ? window_1d_subbyte<MIN_PASS, 1u>
+                  : window_1d_subbyte<MAX_PASS, 1u>;
+      pass2 = (firstOp == Operation::ERODE)
+                  ? window_1d_subbyte<MAX_PASS, 1u>
+                  : window_1d_subbyte<MIN_PASS, 1u>;
+    }
+    else if (bits == 2) {
+      pass1 = (firstOp == Operation::ERODE)
+                  ? window_1d_subbyte<MIN_PASS, 2u>
+                  : window_1d_subbyte<MAX_PASS, 2u>;
+      pass2 = (firstOp == Operation::ERODE)
+                  ? window_1d_subbyte<MAX_PASS, 2u>
+                  : window_1d_subbyte<MIN_PASS, 2u>;
+    }
+    else if (bits == 4) {
+      pass1 = (firstOp == Operation::ERODE)
+                  ? window_1d_subbyte<MIN_PASS, 4u>
+                  : window_1d_subbyte<MAX_PASS, 4u>;
+      pass2 = (firstOp == Operation::ERODE)
+                  ? window_1d_subbyte<MAX_PASS, 4u>
+                  : window_1d_subbyte<MIN_PASS, 4u>;
+    }
+    else if (bits == 8) {
       pass1 = (firstOp == Operation::ERODE)
                   ? window_1d_multibyte<MIN_PASS, uint8_t>
                   : window_1d_multibyte<MAX_PASS, uint8_t>;

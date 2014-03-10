@@ -20,11 +20,11 @@ neighbourhood consists of just {middle,down,right}.
 Images are input and output as raw binary gray-scale
 images, with no header. The processing parameters are
 set on the command line as "width height [bits] [levels]":
-	- Width: positive integer, up to and including 2^24
-	- Height: positive integer, up to and including 2^24
-	- Bits: a binary power <=32, default=8
-	- Levels: number of times to erode before dilating (or vice-versa),
-	          default=1
+  - Width: positive integer, up to and including 2^24
+  - Height: positive integer, up to and including 2^24
+  - Bits: a binary power <=32, default=8
+  - Levels: number of times to erode before dilating (or vice-versa),
+            default=1
 
 A constraint is that mod(Width*bits,64)==0. There
 is no constraint on image size, beyond that imposed
@@ -48,17 +48,17 @@ image with packed hex representation:
 represents the image:
 
   0000 0000 0000 0000 0000 0000 0000 0000 1111 1111 1111 1111 1111 1111 1111 1111
-	0000 0000 0000 0000 1111 0000 1111 0000 0000 0000 0000 0000 0000 1111 0000 1111
-	0000 0001 0000 0010 0000 0100 0000 1000 0001 0000 0010 0000 0100 0000 1000 0000
+  0000 0000 0000 0000 1111 0000 1111 0000 0000 0000 0000 0000 0000 1111 0000 1111
+  0000 0001 0000 0010 0000 0100 0000 1000 0001 0000 0010 0000 0100 0000 1000 0000
 
 You can use imagemagick to convert to and from binary representation.
 For example, to convert a 512x512 image input.png to 2-bit:
 
-	convert input.png -depth 2 gray:input.raw
+  convert input.png -depth 2 gray:input.raw
 
 and to convert output.raw back again:
 
-	convert -size 512x512 -depth 2 gray:output.raw output.png
+  convert -size 512x512 -depth 2 gray:output.raw output.png
 
 They can also read/write on stdin/stdout for streaming. But, it is
 also easy to generate images programmatically, particularly when

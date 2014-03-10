@@ -42,4 +42,4 @@ echo "$width X $height $bits bits $copies copies $levels levels"
  	"$1" $width $height $bits $levels > "$expected")
 
 echo "Comparing..."
-cmp "$actual" "$expected" && echo "Identical"
+cmp -l "$actual" "$expected" && echo "Identical"
