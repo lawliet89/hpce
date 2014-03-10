@@ -90,3 +90,9 @@ mechanisms.
 
 Testing of the algorithms correctness was done by Ryan as he implemented the
 passes and overall testing for concurrency issues was done by Yong Wen.
+===============================================================================
+Compiling and Running
+
+The code files should be compiled with the flag -pthread because of the use of
+the std::thread library. The Makefile will compile the files properly into
+src/v2.

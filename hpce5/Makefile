@@ -6,7 +6,6 @@ all: process src/v2
 
 src/housekeeping.o: src/include/housekeeping.hpp
 src/read_write_sync.o: src/include/read_write_sync.hpp
-src/v1: src/housekeeping.o src/window_1d.o src/read_write_sync.o
 src/v2: src/housekeeping.o src/read_write_sync.o
 
 clean:
