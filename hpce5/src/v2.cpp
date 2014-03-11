@@ -236,7 +236,12 @@ void writeOutput(uint8_t *const buffer, const uint32_t chunkSize,
     uint64_t writeBytes = std::min(uint64_t(chunkSize), imageSize - bytesSoFar);
 
     // TODO: Retry
-    write(STDOUT_FILENO, current, writeBytes);
+    uint64_t bytesWritten = write(STDOUT_FILENO, current, writeBytes);
+
+    while (bytesWritten != writeBytes) {
+      bytesWritten += write(STDOUT_FILENO, current + bytesWritten,
+        writeBytes - bytesWritten);
+    }
 
     bytesSoFar += chunkSize;
     current += chunkSize;
