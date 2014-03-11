@@ -395,8 +395,7 @@ void window_1d_subbyte(uint8_t* const in_buf, uint8_t* const out_buf,
       // iterate through pixels in the byte read above
       uint8_t packing_temp = 0;
       uint8_t subbyte_mask = subbyte_mask_init;
-      for (uint32_t t = 0; t < 8 / bit_width;
-           ++t, subbyte_mask >>= bit_width) {
+      for (uint32_t t = 0; t < 8 / bit_width; ++t, subbyte_mask >>= bit_width) {
         uint8_t curr_val_unshifted = curr_val_ & subbyte_mask;
         uint8_t curr_val = curr_val_unshifted >> (8 - bit_width * (t + 1));
 
