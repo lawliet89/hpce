@@ -60,13 +60,14 @@ uint64_t calculateBufferSize(uint32_t w, uint32_t h, uint32_t bits,
                              uint32_t levels)
 {
   // Minimum buffer size requried
-  uint64_t minBufferSize = (bits  * (w * (2 * levels + 1))/ 8);
+  //uint64_t minBufferSize = (bits  * (w * (2 * levels + 1))/ 8);
+  uint64_t minBufferSize = (w * (2 * levels));
   // make sure it is not bigger than image size
   minBufferSize = std::min(calculateImageSize(w, h, bits), minBufferSize);
 
   // Round actual buffer size to be a power of 2
   uint64_t bufferSize = uint64_t(1u)
-                        << uint32_t(floor(log2(minBufferSize) + 1));
+                        << uint32_t(ceil(log2(minBufferSize)));
 
   assert(bufferSize >= minBufferSize);
   assert(bufferSize % 2 == 0);
