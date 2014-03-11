@@ -431,7 +431,6 @@ void window_1d_subbyte(uint8_t* const in_buf, uint8_t* const out_buf,
               ws->q_head = ws->start;
           }
           if (le_ge_cmp(curr_val, ws->q_head->value)) {
-
             ws->q_head->value = curr_val;
             ws->q_head->retire_idx = i + ws->window_size;
             ws->q_tail = ws->q_head;
