@@ -88,17 +88,22 @@ naturally by being overwritten with fresh data as soon as they're no longer
 needed. So the input pixel in the input buffer is turned into a vertical
 accumulator for the diamond for which it is the top pixel. 
 
-Note that there are 2*N*w active vertical accumulators at a time, corresponding
-to the all state that is yet to be turned into output as it is waiting for
-subsequent data.
+As stated above, there are 2*N*w active vertical accumulators at a time,
+corresponding to the all state that is yet to be turned into output as it is
+waiting for subsequent data.
 
 The read-modify-write operations that the sliding windows do to the accumulators
 should not produce any contention for reasonably sized images as a given
 accumulator is only written to once per entire image row of data.
 
+So, for a single pass, all memory accesses are sequential (both the input data
+and the accumulators) and confined within one circular buffer of optimal size
+that is used for both passing input data in and for storing intermediate
+results. A consequence is good usage of hardware prefetching and caches.
 
 Credit for the base version of the ascending minima algorithm: Richard Harter:
 http://web.archive.org/web/20120805114719/http://home.tiac.net/~cri/2001/slidingmin.html
+
 ===============================================================================
 Future work
 
@@ -114,19 +119,22 @@ buffer code from the window queues). Furthermore, comparison and RMW operations
 can be instead done as binary operators.
 
 In hindsight, the chunk size being independent of the row width was a suboptimal
-decision from a latency point of view, if the image were always padded
-horizontally to be a nice power of two (or similar, to enable nice chunk sizes
-that are a factor of row width), it would enable a lot of the complexity to be
-moved from outside of the hot loop. At the moment the row boundaries can happen
+decision from a latency point of view. If the image was always padded
+horizontally to be a nice power of two (or similar, to enable chunk sizes that
+are a factor of row width), it would enable a lot of the complexity to be moved
+from outside of the hot loop. At the moment the row boundaries can happen
 asynchronous to chunk boundaries and therefore need to be checked for on every
-pixel. Similarly, wrapping checks for the circular buffer keeping vertical
-accumulators have to be performed for every lookup. If the chunk size was a
-factor of row width, all of these checks could be done only on the chunk
-boundaries. Additionally, horizontal windup and draining of 1d windows around
-the window edges could be removed as the windows would be in a consistent state
-by the time the padding is processed. Of course, there would be a bigger memory
-footprint, but it is worthwhile simplifying the hot loop (both for performance
-and code simplicity) if the metric is pixel latency.
+pixel (plus, chunk boundaries in input buffer are not synchronous to boundaries
+at the output buffer -> headache implementation).  Similarly, wrapping checks
+for the circular accumulator buffer have to be performed for every lookup. If
+  the chunk size was a factor of row width, all of these checks could be done
+  only on the chunk boundaries, keeping intra-chunk accesses fully sequential.
+  Additionally, horizontal windup and draining of 1d windows around the window
+  edges could be removed as the windows would be in a consistent state by the
+  time the padding is processed.  Of course, there would be a bigger memory
+  footprint, but it is worthwhile simplifying the hot loop (both for performance
+  and code simplicity) if the metric is pixel latency. Plus, the additional
+  memory is only O(N), and therefore irrelevant for top end N and W parameters.
 
 ===============================================================================
 Verification Methodology
@@ -157,7 +165,7 @@ include/window_1d.hpp - algorithm kernel (templated, hence in header)
 ===============================================================================
 Compiling and Running
 
-No dependencies on tbb or opencl, but if compiling under g++ an explicit
--pthread flag needs to be passed in (provided makefile handles this). 
+No dependencies on tbb or opencl, g++/clang++ require an explicit
+-pthread flag (provided makefile handles this). 
 
 Target binary generated: src/v2.
