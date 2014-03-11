@@ -54,7 +54,7 @@ void window_1d_multibyte(uint8_t* const in_buf_, uint8_t* const out_buf_,
   uint32_t chunk_size = chunk_size_ / sizeof(T);
   uint64_t buf_size = buf_size_ / sizeof(T);
 
-  // not the cleanest way... but under control
+  // not a clean way... but helps with main's dynamic binding
   T* in_buf = reinterpret_cast<T*>(in_buf_);
   T* out_buf = reinterpret_cast<T*>(out_buf_);
 
