@@ -6,15 +6,15 @@ General Approach:
 
 Pipeline of four concurrent threads (via std::thread): read io, first pass,
 second pass, write io. Threads operate in a synchronised streaming fashion on
-blocks (chunks) of data. IO threads can sleep while waiting for processing to be
+blocks (chunks) of data. Threads can sleep while waiting for processing to be
 done (for large N on slow machines), but usually run without blocking, enabling
-fully block-free streaming processing. Note that chunk size is independent of
-row width (can be smaller than for big images or capture several rows at a time
+completely streaming processing. Note that chunk size is independent of
+row width (can be smaller for big images or capture several rows at a time
 for small images, this is both a latency and memory usage optimisation). 
 
 The chunked streaming pipeline lets the io speed to be determined by the
 computation speed, therefore latency will not suffer from starving or overruning
-the processing threads.
+the processing capabilities.
 
 Algorithmic approach:
 
@@ -31,9 +31,10 @@ Consider the SE for one output pixel with N=3:
   333 
    1
 
-Note that adjacent output pixels share the majority of input pixel dependencies,
-therefore an approach that can reuse the partial results is crucial for high N
-values (as at that point, the computational throughput contributes to latency).
+Note that adjacent output pixels share the majority of input pixel
+dependencies, therefore an approach that can reuse the partial results is
+crucial for high N values (as at that point, the computational throughput is a
+significant contribution to latency).
 
 A possible approach (not used here) is to construct differential histograms for
 the pixels entering and leaving the SE as it is slid horizontally. However, this
@@ -50,7 +51,8 @@ different diamond, corresponding to two output pixels with a relative vertical
 offset.
 
 For a given input pixel and N levels, we require N windowed minima results
-centered across that pixel.
+centered across that pixel to be able to construct all contributions from that
+input pixel to all output pixels dependent on it.
 
 These values are obtained by using a sliding window algorithm, computing min/max
 within a fixed size window across a vector of values of a given row. The key
@@ -60,13 +62,14 @@ contributing to two vertically offset outputs). The algorithm used (ascending
 minimum) does O(1) work per input pixel for a window. Given N windows to be done
 per row, this means O(N) work per input pixel, however, the windows are done
 fully independently and can therefore be done in parallel. So given N
-processors, each input pixel could be processed in O(1) time. 
+processors, each input pixel could be processed in O(1) time.
 
 This approach is a natural fit for the data layout, which is streamed in
 scanline order. Since the windows are slid over the pixels in a given row
 sequentially, this means that all accesses are sequential (therefore benefitiing
-from hardware prefetching) and, since we do all N windows at the same time, that
-the input data does not need to be retained and revisited later.
+from hardware prefetching and cache line worth of prefetching) and, since we do
+all N windows at the same time, that the input data does not need to be
+retained and revisited later.
 
 So, for an input pixel in the stream, a pass steps all windows forwards by one
 pixel and spreads the results to 2N vertical accumulators (meaning that the
@@ -78,15 +81,15 @@ There is a natural requirement of 2*N*w retained state, which is stored in a
 circular buffer of vertical accumulators in this approach.
 
 A data layout optimisation for these accumulators is used: consider a bit of
-input image read into a circular buffer, the pixel values actually correspond to
+input image read into a circular buffer, the pixel values already correspond to
 the first 1d stripe pass (of trivial size 1). Instead of copying these values
 into dedicated accumulator storage, we instead treat the input buffer as the
 vertical accumulators, where the input data is already initialised correctly
 purely by being passed to the processing thread through this buffer. Also, since
 it is a circular buffer of (optimal) 2*N*w size, old accumulators are destroyed
 naturally by being overwritten with fresh data as soon as they're no longer
-needed. So the input pixel in the input buffer is turned into a vertical
-accumulator for the diamond for which it is the top pixel. 
+needed. The input pixel in the input buffer is turned into a vertical
+accumulator for the output pixel with the diamond for which it is the top pixel. 
 
 As stated above, there are 2*N*w active vertical accumulators at a time,
 corresponding to the all state that is yet to be turned into output as it is
@@ -141,7 +144,7 @@ Verification Methodology
 
 Mostly through a script (test.sh) that compares processed /dev/urandom data
 against the provided implementation for given parameters. Using this manually
-and through automatic parameter-fuzzing wrapper script.
+and through automatic parameter-fuzzing wrapper scripts.
 
 ===============================================================================
 Work Partition
