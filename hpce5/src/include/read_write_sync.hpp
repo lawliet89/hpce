@@ -7,7 +7,6 @@
 
 class ReadWriteSync {
   bool debug = false;
-  std::string name;
 
   const int quanta = 1;
   std::mutex m;
@@ -19,6 +18,8 @@ class ReadWriteSync {
   std::mutex resetMutex;
   std::condition_variable resetCv;
   bool reset = false;
+  
+  std::string name;
 
 public:
   ReadWriteSync() : semaphore(quanta * -1), name("") {

@@ -51,7 +51,7 @@ void window_1d_multibyte(uint8_t* const in_buf_, uint8_t* const out_buf_,
                          const uint32_t img_height, const uint32_t n_levels,
                          ReadWriteSync& producer, ReadWriteSync& consumer)
 {
-  int32_t chunk_size = chunk_size_ / sizeof(T);
+  uint32_t chunk_size = chunk_size_ / sizeof(T);
   uint64_t buf_size = buf_size_ / sizeof(T);
 
   T* in_buf = reinterpret_cast<T*>(in_buf_);
@@ -91,7 +91,7 @@ void window_1d_multibyte(uint8_t* const in_buf_, uint8_t* const out_buf_,
   // create and initialise rolling windows
   num_windows_assigned = n_levels;
   wss = new window_state<T>[num_windows_assigned];
-  for (int m = 0; m < num_windows_assigned; ++m) {
+  for (uint32_t m = 0; m < num_windows_assigned; ++m) {
     window_state<T>* ws = &wss[m];
     ws->window_size = (m + 1) * 2 + 1;
     ws->start = new win_queue_entry<T>[ws->window_size];
@@ -104,7 +104,7 @@ void window_1d_multibyte(uint8_t* const in_buf_, uint8_t* const out_buf_,
 
   // cleanup to be done before terminating thread
   auto clean_memory = [&wss, &num_windows_assigned]() {
-    for (int m = 0; m < num_windows_assigned; ++m) {
+    for (uint32_t m = 0; m < num_windows_assigned; ++m) {
       window_state<T>* ws = &wss[m];
       delete[] ws->start;
     }
@@ -154,7 +154,7 @@ void window_1d_multibyte(uint8_t* const in_buf_, uint8_t* const out_buf_,
     producer.hintProducer();  // wake up producer
 
     // iterate through input chunk
-    for (int j = 0; j < chunk_size; ++j) {
+    for (uint32_t j = 0; j < chunk_size; ++j) {
       T curr_val = *(curr_chunk + j);
 
       // output vertical accumulator state for the pixel that now has the last
@@ -167,7 +167,7 @@ void window_1d_multibyte(uint8_t* const in_buf_, uint8_t* const out_buf_,
       }
 
       // step all windows by 1 pixel
-      for (int m = 0; m < num_windows_assigned; ++m) {
+      for (uint32_t m = 0; m < num_windows_assigned; ++m) {
         ws = &wss[m];
         win_queue_entry<T>* end = ws->start + ws->window_size;
         uint32_t n_depth = (ws->window_size - 1) / 2;
@@ -288,7 +288,6 @@ void window_1d_subbyte(uint8_t* const in_buf, uint8_t* const out_buf,
   uint32_t out_subchunk_cnt;  // output pixel counter within a chunk
   uint8_t* curr_out_chunk;    // ptr to current output chunk
 
-  uint8_t subbyte_mask;
   uint8_t subbyte_mask_init;
   uint8_t subbyte_mask_base;
 
@@ -312,7 +311,6 @@ void window_1d_subbyte(uint8_t* const in_buf, uint8_t* const out_buf,
       (bit_width == 4) ? 0xf0 : ((bit_width == 2) ? 0xc0 : 0x80);
   subbyte_mask_base =
       (bit_width == 4) ? 0x0f : ((bit_width == 2) ? 0x03 : 0x01);
-  subbyte_mask = subbyte_mask_init;
 
   // min or max pass (compile time decision)
   auto le_ge_cmp = (op_select == MIN_PASS)
@@ -328,7 +326,7 @@ void window_1d_subbyte(uint8_t* const in_buf, uint8_t* const out_buf,
   // create and initialise rolling windows
   num_windows_assigned = n_levels;
   wss = new window_state<uint8_t>[num_windows_assigned];
-  for (int m = 0; m < num_windows_assigned; ++m) {
+  for (uint32_t m = 0; m < num_windows_assigned; ++m) {
     window_state<uint8_t>* ws = &wss[m];
     ws->window_size = (m + 1) * 2 + 1;
     ws->start = new win_queue_entry<uint8_t>[ws->window_size];
@@ -341,7 +339,7 @@ void window_1d_subbyte(uint8_t* const in_buf, uint8_t* const out_buf,
 
   // cleanup to be done before terminating thread
   auto clean_memory = [&wss, &num_windows_assigned]() {
-    for (int m = 0; m < num_windows_assigned; ++m) {
+    for (uint32_t m = 0; m < num_windows_assigned; ++m) {
       window_state<uint8_t>* ws = &wss[m];
       delete[] ws->start;
     }
@@ -391,12 +389,13 @@ void window_1d_subbyte(uint8_t* const in_buf, uint8_t* const out_buf,
     producer.hintProducer();  // wake up producer
 
     // iterate through input chunk in byte steps
-    for (int j = 0; j < chunk_size; ++j) {
+    for (uint32_t j = 0; j < chunk_size; ++j) {
       uint8_t curr_val_ = *(curr_chunk + j);
 
       // iterate through pixels in the byte read above
       uint8_t packing_temp = 0;
-      for (int t = 0, subbyte_mask = subbyte_mask_init; t < 8 / bit_width;
+      uint8_t subbyte_mask = subbyte_mask_init;
+      for (uint32_t t = 0; t < 8 / bit_width;
            ++t, subbyte_mask >>= bit_width) {
         uint8_t curr_val_unshifted = curr_val_ & subbyte_mask;
         uint8_t curr_val = curr_val_unshifted >> (8 - bit_width * (t + 1));
@@ -420,7 +419,7 @@ void window_1d_subbyte(uint8_t* const in_buf, uint8_t* const out_buf,
         }
 
         // step all windows by 1 pixel
-        for (int m = 0; m < num_windows_assigned; ++m) {
+        for (uint32_t m = 0; m < num_windows_assigned; ++m) {
           ws = &wss[m];
           win_queue_entry<uint8_t>* end = ws->start + ws->window_size;
           uint32_t n_depth = (ws->window_size - 1) / 2;
