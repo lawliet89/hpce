@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <mutex>
 
+// use of templates -> code in headers
+
 // public
 enum {
   MAX_PASS = 0,
