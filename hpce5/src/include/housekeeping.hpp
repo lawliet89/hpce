@@ -16,8 +16,9 @@ enum class Operation {
 
 void processArgs(int argc, char *argv[], uint32_t &w, uint32_t &h,
                  uint32_t &bits, uint32_t &levels, Operation &firstOp);
+
 constexpr uint64_t calculateImageSize(uint32_t w, uint32_t h, uint32_t bits) {
-  return w * h * bits / 8lu;
+  return ((uint64_t)w * h * bits) / 8lu;
 }
 uint64_t calculateBufferSize(uint32_t w, uint32_t h, uint32_t bits,
                              uint32_t levels);
