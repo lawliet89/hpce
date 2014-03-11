@@ -66,16 +66,16 @@ processors, each input pixel could be processed in O(1) time.
 
 This approach is a natural fit for the data layout, which is streamed in
 scanline order. Since the windows are slid over the pixels in a given row
-sequentially, this means that all accesses are sequential (therefore benefitiing
-from hardware prefetching and cache line worth of prefetching) and, since we do
-all N windows at the same time, that the input data does not need to be
-retained and revisited later.
+sequentially, this means that all accesses are sequential (therefore
+benefitiing from hardware prefetching and cache line worth of prefetching) and,
+since we do all N windows at the same time, that the input data does not need
+to be retained and revisited later.
 
 So, for an input pixel in the stream, a pass steps all windows forwards by one
 pixel and spreads the results to 2N vertical accumulators (meaning that the
 final single pixel at the bottom of the diamond only needs to do one comparison
-before being pushed into the output stream as the remaider of the SE has already
-been accumulated both horizontally and vertically).
+before being pushed into the output stream as the remaider of the SE has
+already been accumulated both horizontally and vertically).
 
 There is a natural requirement of 2*N*w retained state, which is stored in a
 circular buffer of vertical accumulators in this approach.
@@ -85,24 +85,25 @@ input image read into a circular buffer, the pixel values already correspond to
 the first 1d stripe pass (of trivial size 1). Instead of copying these values
 into dedicated accumulator storage, we instead treat the input buffer as the
 vertical accumulators, where the input data is already initialised correctly
-purely by being passed to the processing thread through this buffer. Also, since
-it is a circular buffer of (optimal) 2*N*w size, old accumulators are destroyed
+purely by being passed to the processing thread through this buffer. Also,
+since it is a circular buffer of 2*N*w size, old accumulators are destroyed
 naturally by being overwritten with fresh data as soon as they're no longer
 needed. The input pixel in the input buffer is turned into a vertical
-accumulator for the output pixel with the diamond for which it is the top pixel. 
+accumulator for the output pixel with the diamond for which it is the top
+pixel. 
 
 As stated above, there are 2*N*w active vertical accumulators at a time,
 corresponding to the all state that is yet to be turned into output as it is
 waiting for subsequent data.
 
-The read-modify-write operations that the sliding windows do to the accumulators
-should not produce any contention for reasonably sized images as a given
-accumulator is only written to once per entire image row of data.
+The read-modify-write operations that the sliding windows do to the
+accumulators should not produce any contention for reasonably sized images as a
+given accumulator is only written to once per entire image row of data.
 
 So, for a single pass, all memory accesses are sequential (both the input data
-and the accumulators) and confined within one circular buffer of optimal size
-that is used for both passing input data in and for storing intermediate
-results. A consequence is good usage of hardware prefetching and caches.
+and the accumulators) and confined within one circular buffer that is used for
+both passing input data in and for storing intermediate results. A consequence
+is good usage of hardware prefetching and caches.
 
 Credit for the base version of the ascending minima algorithm: Richard Harter:
 http://web.archive.org/web/20120805114719/http://home.tiac.net/~cri/2001/slidingmin.html
