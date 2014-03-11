@@ -52,9 +52,9 @@ int main(int argc, char *argv[])
     bufferSize = calculateBufferSize(w, h, bits, levels);
     chunkSize = calculateChunkSize(w, h, bits, levels, bufferSize);
 
-    // The bufferSize is "ideal". To allow us to read-ahead by one chunk, we
-    // shall extend its size by one chunk
-    bufferSize += chunkSize;
+    // Buffer size grown by two chunks, one for the critical batch of pixels,
+    // one for read-ahead
+    bufferSize += 2 * chunkSize;
     imageSize = calculateImageSize(w, h, bits);
     stdinBuffer = allocateBuffer(bufferSize, firstOp == Operation::ERODE);
     intermediateBuffer =
@@ -72,30 +72,21 @@ int main(int argc, char *argv[])
 
     // bind to correct compile-time version:
     if (bits == 1) {
-      pass1 = (firstOp == Operation::ERODE)
-                  ? window_1d_subbyte<MIN_PASS, 1u>
-                  : window_1d_subbyte<MAX_PASS, 1u>;
-      pass2 = (firstOp == Operation::ERODE)
-                  ? window_1d_subbyte<MAX_PASS, 1u>
-                  : window_1d_subbyte<MIN_PASS, 1u>;
-    }
-    else if (bits == 2) {
-      pass1 = (firstOp == Operation::ERODE)
-                  ? window_1d_subbyte<MIN_PASS, 2u>
-                  : window_1d_subbyte<MAX_PASS, 2u>;
-      pass2 = (firstOp == Operation::ERODE)
-                  ? window_1d_subbyte<MAX_PASS, 2u>
-                  : window_1d_subbyte<MIN_PASS, 2u>;
-    }
-    else if (bits == 4) {
-      pass1 = (firstOp == Operation::ERODE)
-                  ? window_1d_subbyte<MIN_PASS, 4u>
-                  : window_1d_subbyte<MAX_PASS, 4u>;
-      pass2 = (firstOp == Operation::ERODE)
-                  ? window_1d_subbyte<MAX_PASS, 4u>
-                  : window_1d_subbyte<MIN_PASS, 4u>;
-    }
-    else if (bits == 8) {
+      pass1 = (firstOp == Operation::ERODE) ? window_1d_subbyte<MIN_PASS, 1u>
+                                            : window_1d_subbyte<MAX_PASS, 1u>;
+      pass2 = (firstOp == Operation::ERODE) ? window_1d_subbyte<MAX_PASS, 1u>
+                                            : window_1d_subbyte<MIN_PASS, 1u>;
+    } else if (bits == 2) {
+      pass1 = (firstOp == Operation::ERODE) ? window_1d_subbyte<MIN_PASS, 2u>
+                                            : window_1d_subbyte<MAX_PASS, 2u>;
+      pass2 = (firstOp == Operation::ERODE) ? window_1d_subbyte<MAX_PASS, 2u>
+                                            : window_1d_subbyte<MIN_PASS, 2u>;
+    } else if (bits == 4) {
+      pass1 = (firstOp == Operation::ERODE) ? window_1d_subbyte<MIN_PASS, 4u>
+                                            : window_1d_subbyte<MAX_PASS, 4u>;
+      pass2 = (firstOp == Operation::ERODE) ? window_1d_subbyte<MAX_PASS, 4u>
+                                            : window_1d_subbyte<MIN_PASS, 4u>;
+    } else if (bits == 8) {
       pass1 = (firstOp == Operation::ERODE)
                   ? window_1d_multibyte<MIN_PASS, uint8_t>
                   : window_1d_multibyte<MAX_PASS, uint8_t>;
@@ -195,7 +186,7 @@ void readInput(uint8_t *const buffer, const uint32_t chunkSize,
     sync.produce(std::move(lock));
 
     if (bytesReadSoFar >= imageSize) {
-      std::cerr << "[Read] Image Boundary. Waitng for reset..." << std::endl;
+      std::cerr << "[Read] Image Boundary. Waiting for reset..." << std::endl;
       resetLock = sync.waitForReset();
 
       // Perform resets
@@ -239,7 +230,7 @@ void writeOutput(uint8_t *const buffer, const uint32_t chunkSize,
 
     while (bytesWritten != writeBytes) {
       bytesWritten += write(STDOUT_FILENO, current + bytesWritten,
-        writeBytes - bytesWritten);
+                            writeBytes - bytesWritten);
     }
 
     bytesSoFar += chunkSize;
