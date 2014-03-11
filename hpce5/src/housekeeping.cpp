@@ -22,12 +22,8 @@ void processArgs(int argc, char *argv[], uint32_t &w, uint32_t &h,
   if (bits > 32)
     throw std::invalid_argument("Bits must be <= 32.");
 
-  uint32_t tmp = bits;
-  while (tmp != 1) {
-    tmp >>= 1;
-    if (tmp == 0)
-      throw std::invalid_argument("Bits must be a binary power.");
-  }
+  if (!(bits && !(bits & (bits - 1))))
+    throw std::invalid_argument("Bits must be a binary power.");
 
   if (((w * bits) % 64) != 0) {
     throw std::invalid_argument(" width*bits must be divisible by 64.");

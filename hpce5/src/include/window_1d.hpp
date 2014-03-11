@@ -22,6 +22,8 @@ struct win_queue_entry
   uint32_t retire_idx;
 };
 
+// state of the sliding window algorithm, packaged in a struct to be able to
+// easily do any amount of windows per thread.
 template <typename T>
 struct window_state
 {
@@ -38,8 +40,7 @@ struct window_state
 // vertically into the full SE, reusing window results.
 // Does O(n) work per input pixel, windows can be independently in separate
 // threads, enabling pixels to be processed in O(1) time.
-// Approach based on the ascending minima algorithm by Richard Harter:
-// http://web.archive.org/web/20120805114719/http://home.tiac.net/~cri/2001/slidingmin.html
+
 // handles 1,2,4 byte pixel cases
 template <unsigned op_select, typename T>
 void window_1d_multibyte(uint8_t* const in_buf_, uint8_t* const out_buf_,
@@ -407,7 +408,7 @@ void window_1d_subbyte(uint8_t* const in_buf, uint8_t* const out_buf,
           uint8_t* acc0 = curr_chunk + j - (2 * n_levels) * img_w_bytes;
           acc0 += (acc0 < in_buf ? buf_size : 0);
 
-          // pack pixel outputs as they come
+          // pack pixel outputs in a byte as they come
           packing_temp |=
               min_or_max(((*acc0) & subbyte_mask), curr_val_unshifted);
 
@@ -450,6 +451,8 @@ void window_1d_subbyte(uint8_t* const in_buf, uint8_t* const out_buf,
           // as pixels are packed within bytes, need to calculate how many bytes
           // and how much to shift by to get to the proper accumulators n_depth
           // pixels to the left (corresponding to the window's middle pixel)
+          // note: major headache, should have just considered unpacking
+          // explicitly for sub-byte sizes
           uint32_t bytes_back =
               (n_depth + ((8 / bit_width) - 1 - t)) / (8 / bit_width);
           uint32_t acc_sub_pos =
