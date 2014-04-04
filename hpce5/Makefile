@@ -1,5 +1,9 @@
-CPPFLAGS= -Wall -std=c++11 -O3 -pthread
-#CXX=clang++
+CPPFLAGS=-Xclang -load -Xclang
+CPPFLAGS+=/home/yongwen/work/fyp/llvm/projects/LLVM-Obfuscator/Debug+Asserts/lib/LLVMObfuscatorTransforms.so
+CPPFLAGS+= -Wall -std=c++11 -O3 -pthread
+# CPPFLAGS+= -mllvm -debug-only=boguscf
+# CPPFLAGS += -mllvm -print-after-all
+CXX=/home/yongwen/work/fyp/build/Debug+Asserts/bin/clang++
 SHELL=/bin/bash
 
 all: process src/v2
