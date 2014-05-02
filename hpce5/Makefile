@@ -8,7 +8,8 @@ CXX=/home/yongwen/work/fyp/build/Debug+Asserts/bin/clang++
 SHELL=/bin/bash
 
 all: process src/v2
-
+process:
+	g++  -Wall -std=c++11 -O3 -pthread   process.cpp   -o process
 src/housekeeping.o: src/include/housekeeping.hpp
 src/read_write_sync.o: src/include/read_write_sync.hpp
 src/v2: src/housekeeping.o src/read_write_sync.o
